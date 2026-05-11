@@ -1,0 +1,158 @@
+[
+  {
+    "id": "award-sprint",
+    "name": "Award Submission — Campaign Case Study",
+    "brief": "Client: The Coca-Cola Company (Sprite)\nFormat: 2:00 award submission\nGenre: Business Case / Award Submission\n\nBrief:\nSummer of Sprite campaign case study for NMA submission. Biggest summer campaign in brand history. Partnered with major music festivals across 12 cities, launched limited-edition packaging with 4 regional designs, drove +18% volume growth vs YA. Culturally resonant social campaign with 2B impressions. Gen Z audience. Budget was 40% lower than previous summer campaign. Need to tell the story of how a scrappy, culture-first approach outperformed big-budget precedent.",
+    "expected_genre": "Business Case / Award Submission",
+    "runtime_seconds": 120
+  },
+  {
+    "id": "explainer-pulse",
+    "name": "Platform Explainer — Analytics Dashboard",
+    "brief": "Client: The Coca-Cola Company\nFormat: 1:15 explainer\nGenre: Platform / Product Explainer\n\nBrief:\nIntroduce a new internal analytics dashboard called Pulse that gives brand managers real-time sales data across all channels. It replaces three legacy tools (MarketVision, SalesTrack, and ChannelView) and gives 150+ metrics in one view. Currently rolling out to 50 markets. The old tools required manual CSV exports and took 3 days to get a cross-channel view. Pulse does it in seconds. Audience is cross-functional brand teams who are skeptical of yet another tool.",
+    "expected_genre": "Platform / Product Explainer",
+    "runtime_seconds": 75
+  },
+  {
+    "id": "sizzle-food",
+    "name": "Experiential — Food Sizzle Reel",
+    "brief": "Client: The Coca-Cola Company\nFormat: :60 sizzle video, city-adaptable\nGenre: Experiential / Consumer Journey\n\nBrief:\nA 60-second sizzle about how Coke pairs with local food. Needs to be adaptable from Nashville to Chicago to Atlanta. Each city version should feature 3-4 local restaurants. The master is a template — locked VO spine, variable city shots and restaurant names. This will be used at retail partner meetings to show how Coke activates locally. Should feel warm, appetizing, real — not corporate.",
+    "expected_genre": "Experiential / Consumer Journey",
+    "runtime_seconds": 60
+  },
+  {
+    "id": "event-opener",
+    "name": "Event Opener — Creative Summit",
+    "brief": "Client: StudioNow (internal)\nFormat: 1:30 event opener\nGenre: Experiential / Consumer Journey\n\nBrief:\nOpening video for the 2026 StudioNow Creative Summit in Nashville. 200 attendees — internal team plus key client partners. Theme: 'The Next Frame.' Celebrating innovation in AI-powered production while honoring craft. Should build anticipation and energy. Plays in a dark ballroom before the CEO takes the stage. No VO — music and supers only. Nashville location matters.",
+    "expected_genre": "Experiential / Consumer Journey",
+    "runtime_seconds": 90
+  },
+  {
+    "id": "spec-pibb",
+    "name": "Spec Commercial — Mr. Pibb :30",
+    "brief": "Client: The Coca-Cola Company (Mr. Pibb)\nFormat: :30 spec commercial\nGenre: Experiential / Consumer Journey\nKey Message / Tagline: Mr. Pibb is Built Different\n\nBrief:\nA :30 brand film for Mr. Pibb. Position the soda as confident, unpretentious, and joyful. Dry, deadpan comedy. Cinematic seriousness applied to absurdly simple moments. No dialogue — visual storytelling with SFX. AI-led production (flag what needs human curation). The humor comes from treating mundane moments with the gravity of a prestige film.",
+    "expected_genre": "Experiential / Consumer Journey",
+    "runtime_seconds": 30
+  },
+  {
+    "id": "internal-capabilities",
+    "name": "Internal — StudioNow Capabilities Overview",
+    "brief": "Client: StudioNow (internal)\nFormat: 1:30 capabilities overview\nGenre: Platform / Product Explainer\n\nBrief:\nA capabilities video for StudioNow to use in new client pitches. Must cover: embedded production model, 120,000+ projects delivered, 200+ countries, AI-assisted creative, live event production, and localized content at scale. Audience is potential enterprise clients (marketing VPs). Should feel premium and confident without being a typical agency sizzle. Show the work, not just talk about it. Include reference to real Coca-Cola partnership.",
+    "expected_genre": "Platform / Product Explainer",
+    "runtime_seconds": 90
+  },
+  {
+    "id": "localization-mm",
+    "name": "Localization System — Minute Maid 5 Markets",
+    "brief": "Client: The Coca-Cola Company (Minute Maid)\nFormat: :45 per market, 5 market versions\nGenre: Experiential / Consumer Journey\n\nBrief:\nMinute Maid is launching a 'Morning Moments' campaign across 5 US markets: Miami, Houston, Phoenix, Seattle, and Boston. Each market gets a :45 video showing local morning routines paired with Minute Maid. The VO spine and music are locked across all versions. Variable elements: city-specific b-roll, local talent, regional morning rituals, weather/light quality, local breakfast foods. Need the master script plus a localization guide showing what swaps per market.",
+    "expected_genre": "Experiential / Consumer Journey",
+    "runtime_seconds": 45
+  },
+  {
+    "id": "ai-showcase",
+    "name": "AI Production Showcase — Proof of Concept",
+    "brief": "Client: The Coca-Cola Company\nFormat: 1:00 proof of concept\nGenre: Platform / Product Explainer\n\nBrief:\nA 60-second showcase of what AI-assisted production can do for Coca-Cola's content pipeline. This is NOT a tech demo — it's a creative piece that happens to be made with AI. Show 3 use cases: (1) rapid localization of a global campaign into 15 markets, (2) generating seasonal packaging concepts, (3) creating social content variations at scale. The audience is TCCC marketing leadership who are AI-curious but wary of quality. Must feel premium, not gimmicky. Flag what needs human oversight.",
+    "expected_genre": "Platform / Product Explainer",
+    "runtime_seconds": 60
+  },
+  {
+    "id": "reg-vague-emotion",
+    "name": "Regression — Vague Emotion Brief",
+    "brief": "Client: The Coca-Cola Company\nScript Type: Commercial / Brand Film\nTone: Emotion-Driven\nInternal or External: External\nRuntime: :60\n\nBrief:\nWe want people to feel something real when they see this. It should capture what Coca-Cola means to people. Not the product, but the feeling. The moments. The connections. Make it emotional and authentic. Think holidays, summer, family, friends. We want tears. We want shares. We want this to go viral.\n\nBusiness Objective: Not stated beyond virality.\nExisting Assets: Full access to Coca-Cola's video archive.\nMust-Haves: Coca-Cola brand presence.",
+    "expected_genre": "Commercial / Brand Film",
+    "runtime_seconds": 60,
+    "tone": "Emotion-Driven",
+    "training_group": "weak_brief",
+    "primary_test": "generic_writing_resistance"
+  },
+  {
+    "id": "reg-just-cool",
+    "name": "Regression — Just Make It Cool",
+    "brief": "Client: The Coca-Cola Company\nScript Type: Standard Sizzle\nTone: Energetic / Upbeat\nInternal or External: External\nRuntime: :60\n\nBrief:\nWe need a hype video for Coca-Cola Zero Sugar. Something cool and energetic that shows the brand is modern and relevant. Think fast cuts, bold visuals, great music. We want people to feel excited about Zero Sugar.\n\nBusiness Objective: Not clearly stated. Implied: general brand awareness.\nExisting Assets: Whatever you need from the brand library.\nMust-Haves: Coca-Cola Zero Sugar name, product appearance.",
+    "expected_genre": "Standard Sizzle",
+    "runtime_seconds": 60,
+    "tone": "Energetic / Upbeat",
+    "training_group": "weak_brief",
+    "primary_test": "diagnosis_of_empty_brief"
+  },
+  {
+    "id": "reg-sustainability",
+    "name": "Regression — Sustainability Film",
+    "brief": "Client: The Coca-Cola Company\nScript Type: Case Study / Awards\nTone: Human / Documentary\nInternal or External: External\nRuntime: 2:00\n\nBrief:\nCoca-Cola's World Without Waste program committed in 2018 to collecting and recycling a bottle or can for every one sold by 2030. We are now in 2026. We have made real progress: 68% collection rate in Europe, 45% globally. We have invested $300M in recycling infrastructure across 20 countries. Our PlantBottle technology is now in 35% of our packaging. But we are not at 100%, and we will not be by 2030 without system-level change. We want to be honest about where we are, what we have accomplished, and what still needs to happen. This is not a victory lap. It is a progress report for an audience that will fact-check every claim.\n\nAudience: ESG-focused investors, sustainability NGO partners, and journalists.\nBusiness Objective: Maintain credibility with ESG stakeholders by being transparent about progress and gaps.\nExisting Assets: Recycling facility footage, PlantBottle manufacturing B-roll, community collection program footage from multiple countries, World Without Waste data from annual reports.\nMissing Assets: Updated data visualizations, possible new footage from 2026 initiatives, motion graphics.\nMust-Haves: 68% EU collection rate, 45% global rate, $300M investment, PlantBottle 35% penetration, honest acknowledgment of the 2030 gap.\nDesired Ending: The work continues. Partner with us.",
+    "expected_genre": "Case Study / Awards",
+    "runtime_seconds": 120,
+    "tone": "Human / Documentary",
+    "training_group": "high_stakes",
+    "primary_test": "honest_restraint"
+  },
+  {
+    "id": "reg-info-dump",
+    "name": "Regression — Information Dump",
+    "brief": "Client: The Coca-Cola Company\nScript Type: Explainer\nTone: Direct / Informational\nInternal or External: Internal\nRuntime: 1:30\n\nBrief:\nNew route-to-market model for Latin America. Three tiers: Tier 1 is direct-store-delivery for top 20% of accounts. Tier 2 is hybrid delivery with pre-sell routes for mid-tier accounts. Tier 3 is wholesale distribution for rural and low-volume accounts. Implementation begins Q1 2027 in Mexico and Colombia, expanding to Brazil and Argentina in Q2. The model reduces delivery costs by 18% while improving store-level availability by 22%. Each tier has different ordering systems, delivery frequencies, and merchandising support levels. Bottling partners need to understand which accounts fall into which tier and what changes for their operations.\n\nAudience: Coca-Cola bottling partners across Latin America.\nBusiness Objective: Ensure bottling partners understand and can operationalize the new tiered model.\nExisting Assets: RTM strategy deck with tier definitions, current delivery route maps, cost/availability data.\nMissing Assets: Motion graphics for tier system visualization, map animations for rollout, VO talent (Spanish and Portuguese versions needed).\nMust-Haves: Three-tier structure, cost and availability metrics, rollout timeline, market sequence.\nDesired Ending: Attend the regional implementation briefing. Contact the RTM transition team with questions.",
+    "expected_genre": "Explainer",
+    "runtime_seconds": 90,
+    "tone": "Direct / Informational",
+    "training_group": "weak_brief",
+    "primary_test": "story_from_pure_data"
+  },
+  {
+    "id": "reg-still-here",
+    "name": "Regression — Coca-Cola Still Here",
+    "brief": "Client: The Coca-Cola Company\nScript Type: Commercial / Brand Film\nTone: Commercial / Cinematic\nInternal or External: External\nRuntime: :30\n\nBrief:\nA :30 brand film for Coca-Cola that centers on the idea of being present in the small, overlooked moments. Not the big celebrations. The Tuesday dinners. The gas station stop on a long drive. The 10pm couch sit after the kids are asleep. Coca-Cola has been in all of these moments for over a century. Not as the hero of the moment, but as the thing that was just... there. The brand line is \"Still Here.\"\n\nAudience: General market consumers, broad demo (18-55), broadcast and digital placement.\nBusiness Objective: Reinforce emotional brand affinity. Remind consumers that Coke is woven into the fabric of ordinary life.\nExisting Assets: Coca-Cola master brand system, extensive archival footage library (decades of consumer moments), \"Still Here\" brand line.\nMissing Assets: New footage if desired (or can be built entirely from archival), music licensing.\nMust-Haves: \"Still Here\" brand line, product presence that feels organic (not hero-lit pack shots), at least one archival element.\nDesired Ending: No explicit CTA. Brand feeling. \"Still Here.\"",
+    "expected_genre": "Commercial / Brand Film",
+    "runtime_seconds": 30,
+    "tone": "Commercial / Cinematic",
+    "training_group": "foundational",
+    "primary_test": "minimal_vo_craft"
+  },
+  {
+    "id": "reg-mesa-familia",
+    "name": "Regression — Mesa de Familia",
+    "brief": "Client: The Coca-Cola Company\nScript Type: Experiential / Consumer Journey\nTone: Emotion-Driven\nInternal or External: External\nRuntime: :60\n\nBrief:\nCoca-Cola is sponsoring a series of 'Mesa de Familia' pop-up dinners in five cities with large Hispanic communities (Miami, Houston, Los Angeles, Chicago, New York). The events pair local chefs with family recipes submitted by community members. Each dinner seats 50 people. The concept: your abuela's recipe, made by a chef who respects it, served at a table full of strangers who become family for the night. We need a :60 piece that captures the emotional core of these events and drives sign-ups for the remaining cities.\n\nAudience: Hispanic/Latino consumers (18-35), bilingual, US-based.\nBusiness Objective: Deepen Coca-Cola's connection with Hispanic consumers through culturally rooted experiences.\nExisting Assets: Footage from the first two dinners (Miami and Houston), chef interview clips, community recipe submission clips, event photography.\nMissing Assets: Footage from remaining cities (events have not happened yet), final city-specific graphics, music licensing.\nMust-Haves: Mesa de Familia name, at least one real recipe/family story, city list, sign-up CTA, Spanish language moments integrated naturally.\nDesired Ending: Sign up for Mesa de Familia in your city.",
+    "expected_genre": "Experiential / Consumer Journey",
+    "runtime_seconds": 60,
+    "tone": "Emotion-Driven",
+    "training_group": "high_stakes",
+    "primary_test": "cultural_specificity"
+  },
+  {
+    "id": "reg-ceo-keynote",
+    "name": "Regression — CEO Keynote Opener",
+    "brief": "Client: The Coca-Cola Company\nScript Type: Standard Sizzle\nTone: Confident / Corporate\nInternal or External: Internal (shown to 500+ senior leaders and partners)\nRuntime: 1:30\n\nBrief:\nThis opens the CEO's keynote at the 2027 Global Leadership Summit. It must set the context for a strategy presentation about Coca-Cola's next growth chapter. Key themes: the company grew revenue 8% in 2026, expanded into 3 new beverage categories, and achieved carbon-neutral operations in 12 markets. But the message is not 'look what we did.' It is 'look at the foundation we built for what comes next.' The CEO will take the stage immediately after this video. It must create the right energy: confident, forward-looking, substantial.\n\nAudience: 500 senior leaders, board members, and strategic partners at the CEO's annual strategy keynote.\nBusiness Objective: Frame the CEO's keynote. Create earned confidence and forward momentum.\nExisting Assets: 2026 annual report data and visuals, event footage from key 2026 moments, CEO approved photography, TCCC corporate brand system.\nMissing Assets: Motion graphics for data reveals, new B-roll if desired, music.\nMust-Haves: 8% revenue growth, 3 new categories, 12 carbon-neutral markets. No metric can be wrong.\nDesired Ending: The CEO walks on stage to a room that is leaning forward, not applauding politely.",
+    "expected_genre": "Standard Sizzle",
+    "runtime_seconds": 90,
+    "tone": "Confident / Corporate",
+    "training_group": "high_stakes",
+    "primary_test": "executive_tone_precision"
+  },
+  {
+    "id": "reg-pulse-explainer",
+    "name": "Regression — Coca-Cola Pulse Platform",
+    "brief": "Client: The Coca-Cola Company\nScript Type: Explainer\nTone: Tech-Forward\nInternal or External: Internal\nRuntime: 1:30\n\nBrief:\nCoca-Cola is rolling out 'Pulse,' a new internal marketing intelligence platform that consolidates campaign performance data, media spend tracking, and competitive benchmarking into a single dashboard. Currently, teams use three different tools and spend an average of 6 hours per week compiling reports manually. Pulse replaces all three. It has real-time dashboards, automated weekly summaries, and an AI-powered anomaly detection feature that flags underperforming campaigns before quarterly reviews. The rollout begins in Q3 2026.\n\nAudience: TCCC marketing teams across North America (brand managers, media planners, analytics leads).\nBusiness Objective: Drive adoption of Pulse across marketing teams before Q3 rollout.\nExisting Assets: Pulse UI screenshots (beta version), TCCC internal brand guidelines, existing explainer videos for reference tone.\nMissing Assets: Screen recordings of Pulse in action, motion graphics for data visualization demos, VO talent.\nMust-Haves: Platform name by :15, three core capabilities (dashboards, automated summaries, anomaly detection), Q3 2026 rollout date, sign-up CTA.\nDesired Ending: Sign up for early access and onboarding sessions.",
+    "expected_genre": "Explainer",
+    "runtime_seconds": 90,
+    "tone": "Tech-Forward",
+    "training_group": "foundational",
+    "primary_test": "problem_first_explainer"
+  },
+  {
+    "id": "reg-costa-cutdown",
+    "name": "Regression — Costa Coffee :15 Cutdown",
+    "brief": "Client: The Coca-Cola Company (Costa Coffee)\nScript Type: Standard Sizzle\nTone: Energetic / Upbeat\nInternal or External: External (Instagram Reels and TikTok)\nRuntime: :15\n\nBrief:\nWe have an existing :90 Costa Coffee brand film that covers the full bean-to-cup journey: sourcing in Colombia, roasting in the UK, barista craft, and the consumer moment. We need a :15 cutdown for social. It should feel complete on its own, not like a trailer for a longer piece. Pick the strongest thread from the :90 and build a tight :15 around it. The :90 has beautiful footage: drone shots of Colombian coffee farms, close-up roasting footage, latte art sequences, and a warm consumer moment in a Costa shop.\n\nAudience: Consumers (18-34), social-native.\nBusiness Objective: Drive brand awareness on social platforms with a thumb-stopping short.\nExisting Assets: Full :90 film (all footage available for reuse), Costa Coffee brand system, tagline.\nMissing Assets: None. This is a recut, not a new production.\nMust-Haves: Must use only footage from the existing :90. Tagline: 'Life Tastes Better With Costa.' Brand presence.\nDesired Ending: Life Tastes Better With Costa. Brand impression, no hard CTA.",
+    "expected_genre": "Standard Sizzle",
+    "runtime_seconds": 15,
+    "tone": "Energetic / Upbeat",
+    "training_group": "asset_constrained",
+    "primary_test": "extreme_density"
+  },
+  {
+    "id": "reg-fanta-lab",
+    "name": "Regression — Fanta Flavor Lab",
+    "brief": "Client: The Coca-Cola Company (Fanta)\nScript Type: Case Study / Awards\nTone: Confident / Corporate\nInternal or External: External (Effie Awards submission)\nRuntime: 2:00\n\nBrief:\nIn 2025, Fanta launched 'Flavor Lab,' a campaign that let consumers vote on three experimental flavors through an interactive social platform. The winning flavor was produced as a limited run. The campaign ran for 8 weeks across 12 markets. Results: 4.2 million votes cast, 23% increase in brand consideration among 16-24 year-olds, 31% lift in social engagement vs. prior Fanta campaigns, and the winning flavor (Mango Chili Twist) sold out in 72 hours. The campaign was built on the insight that Gen Z does not want to be marketed to. They want to be the marketer.\n\nAudience: Effie Awards judges (senior marketers, strategists, agency leaders).\nBusiness Objective: Win an Effie by proving the campaign's strategic rigor and measurable business impact.\nExisting Assets: Campaign footage (social platform UI, consumer participation clips, launch event footage, retail shelf footage), data visualizations from the results deck, Fanta brand assets.\nMissing Assets: Motion graphics for data reveals, cleaned-up social media captures, possible re-edit of launch event footage.\nMust-Haves: All four metrics (votes, consideration lift, engagement lift, sellout speed), the consumer insight, the interactive mechanic, the 12-market scale.\nDesired Ending: Judges should feel this was strategically sound, creatively brave, and measurably effective.",
+    "expected_genre": "Case Study / Awards",
+    "runtime_seconds": 120,
+    "tone": "Confident / Corporate",
+    "training_group": "foundational",
+    "primary_test": "data_deployment_as_drama"
+  }
+]

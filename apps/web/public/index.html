@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StudioNow Agentic Script Creator</title>
+  <style>
+    :root {
+      --ink: #171717;
+      --muted: #5b6168;
+      --line: #d9dde2;
+      --paper: #ffffff;
+      --wash: #f6f7f8;
+      --red: #c91432;
+      --green: #0a7b62;
+      --gold: #9a6b00;
+      --focus: #2557a7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--wash);
+      line-height: 1.5;
+    }
+
+    header {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 16px 24px;
+      border-bottom: 4px solid var(--red);
+    }
+
+    .topbar {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .mark {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .mark img {
+      width: 34px;
+      height: 34px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+
+    .subhead {
+      color: rgba(255,255,255,0.68);
+      font-size: 14px;
+    }
+
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 24px 44px;
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    h1 { font-size: 18px; }
+    h2 { font-size: 18px; margin-bottom: 6px; }
+    h3 { font-size: 14px; margin-bottom: 4px; }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    textarea, input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font: inherit;
+      padding: 11px 12px;
+      background: #fbfbfc;
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 330px;
+      resize: vertical;
+    }
+
+    textarea:focus, input:focus, button:focus {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 6px;
+      background: var(--red);
+      color: var(--paper);
+      font: inherit;
+      font-weight: 800;
+      padding: 11px 14px;
+      cursor: pointer;
+      min-height: 44px;
+    }
+
+    button.secondary {
+      background: var(--ink);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0 20px;
+    }
+
+    .stage {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 78px;
+      background: #fbfbfc;
+    }
+
+    .stage.active {
+      border-color: var(--red);
+      box-shadow: inset 0 0 0 1px var(--red);
+    }
+
+    .stage.done {
+      border-color: var(--green);
+    }
+
+    .stage small {
+      color: var(--muted);
+      display: block;
+      margin-top: 4px;
+    }
+
+    .event-log {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 140px;
+      max-height: 240px;
+      overflow: auto;
+      background: #fbfbfc;
+      padding: 12px;
+      font-size: 13px;
+    }
+
+    .event {
+      padding: 7px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .event:last-child { border-bottom: 0; }
+
+    .result {
+      margin-top: 18px;
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+    }
+
+    .download-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 10px 0 16px;
+    }
+
+    .download-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      background: var(--ink);
+      color: var(--paper);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .download-link[aria-disabled="true"] {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #101214;
+      color: #f2f4f6;
+      border-radius: 8px;
+      padding: 16px;
+      overflow: auto;
+      max-height: 560px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      border-radius: 6px;
+      background: #f4ead0;
+      color: #4f3600;
+      padding: 4px 8px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfbfc;
+      padding: 12px;
+      margin: 12px 0 18px;
+    }
+
+    .panel.hidden { display: none; }
+
+    .direction-card {
+      border-top: 1px solid var(--line);
+      padding: 12px 0;
+    }
+
+    .direction-card:first-child { border-top: 0; }
+
+    .direction-card p { margin-bottom: 8px; }
+
+    .feedback-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font: inherit;
+      padding: 10px 12px;
+      background: #fbfbfc;
+      color: var(--ink);
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      margin: 6px 0 12px;
+    }
+
+    .check-row input { width: auto; }
+
+    @media (max-width: 880px) {
+      main { grid-template-columns: 1fr; }
+      .status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .topbar { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="mark">
+        <img alt="" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=120&q=80">
+        <div>
+          <h1>StudioNow Script Creator</h1>
+          <div class="subhead">Agent workflow prototype</div>
+        </div>
+      </div>
+      <span class="pill">Vercel UI/API + Supabase jobs + Node worker</span>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>Brief Intake</h2>
+      <p>Submit a brief. The worker turns it into staged artifacts before a final script appears.</p>
+      <form id="brief-form">
+        <label for="name">Project name</label>
+        <input id="name" name="name" value="Pulse Platform Explainer">
+
+        <div style="height: 14px"></div>
+
+        <label for="brief">Brief</label>
+        <textarea id="brief" name="brief">Client: The Coca-Cola Company
+Script Type: Explainer
+Tone: Tech-Forward
+Internal or External: Internal
+Runtime: 1:30
+
+Brief:
+Coca-Cola is rolling out 'Pulse,' a new internal marketing intelligence platform that consolidates campaign performance data, media spend tracking, and competitive benchmarking into a single dashboard. Currently, teams use three different tools and spend an average of 6 hours per week compiling reports manually. Pulse replaces all three. It has real-time dashboards, automated weekly summaries, and an AI-powered anomaly detection feature that flags underperforming campaigns before quarterly reviews. The rollout begins in Q3 2026.
+
+Audience: TCCC marketing teams across North America.
+Business Objective: Drive adoption of Pulse across marketing teams before Q3 rollout.
+Existing Assets: Pulse UI screenshots, TCCC internal brand guidelines.
+Missing Assets: Screen recordings of Pulse in action, motion graphics for data visualization demos.
+Must-Haves: Platform name by :15, three core capabilities, Q3 2026 rollout date, sign-up CTA.</textarea>
+
+        <div class="actions">
+          <button id="submit" type="submit">Create Job</button>
+          <button class="secondary" id="load-demo" type="button">Load Demo Job</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2>Workflow State</h2>
+      <p id="job-label">No job yet.</p>
+
+      <div class="status-grid" id="stages"></div>
+
+      <h3>Events</h3>
+      <div class="event-log" id="events">Waiting for a job.</div>
+
+      <div class="result">
+        <div class="panel hidden" id="direction-panel"></div>
+
+        <h3>Quality Review</h3>
+        <div class="panel" id="critique-summary">Waiting for critique.</div>
+
+        <h3>Final Script</h3>
+        <pre id="final">The final artifact will appear here when the worker completes.</pre>
+
+        <h3>Human Feedback</h3>
+        <form class="panel" id="feedback-form">
+          <div class="feedback-grid">
+            <div>
+              <label for="rating">Rating</label>
+              <select id="rating" name="rating">
+                <option value="">Not rated</option>
+                <option value="5">5 - Gold</option>
+                <option value="4">4 - Strong</option>
+                <option value="3">3 - Usable with edits</option>
+                <option value="2">2 - Weak</option>
+                <option value="1">1 - Miss</option>
+              </select>
+            </div>
+            <div>
+              <label for="verdict">Verdict</label>
+              <select id="verdict" name="verdict">
+                <option value="needs_review">Needs review</option>
+                <option value="gold_candidate">Gold candidate</option>
+                <option value="usable">Usable</option>
+                <option value="needs_work">Needs work</option>
+                <option value="miss">Miss</option>
+              </select>
+            </div>
+          </div>
+          <label for="feedback-comment">What should the agent learn?</label>
+          <textarea id="feedback-comment" name="comment" style="min-height: 92px" placeholder="Example: Strong visual motif, but the close is too generic. Make future scripts land the commercial argument harder."></textarea>
+          <label class="check-row">
+            <input id="promote-to-gold" name="promoteToGold" type="checkbox">
+            Mark as a gold candidate after human edits
+          </label>
+          <button id="feedback-submit" type="submit">Save Feedback</button>
+          <p id="feedback-status" style="margin-top: 10px"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const stageLabels = [
+      ["diagnosis", "Diagnose"],
+      ["source_mining", "Mine"],
+      ["strategy", "Strategize"],
+      ["blueprint", "Blueprint"],
+      ["draft", "Draft"],
+      ["runtime_edit", "Runtime"],
+      ["critique", "Critique"],
+      ["final", "Final"]
+    ];
+
+    let activeJobId = null;
+    let pollTimer = null;
+
+    const form = document.querySelector("#brief-form");
+    const submit = document.querySelector("#submit");
+    const loadDemo = document.querySelector("#load-demo");
+    const jobLabel = document.querySelector("#job-label");
+    const eventsEl = document.querySelector("#events");
+    const finalEl = document.querySelector("#final");
+    const stagesEl = document.querySelector("#stages");
+    const directionPanel = document.querySelector("#direction-panel");
+    const critiqueSummary = document.querySelector("#critique-summary");
+    const feedbackForm = document.querySelector("#feedback-form");
+    const feedbackSubmit = document.querySelector("#feedback-submit");
+    const feedbackStatus = document.querySelector("#feedback-status");
+
+    const downloads = document.createElement("div");
+    downloads.className = "download-row";
+    downloads.innerHTML = `
+      <a id="script-docx" class="download-link" aria-disabled="true">Download Script .docx</a>
+      <a id="notes-docx" class="download-link" aria-disabled="true">Download Producer Notes .docx</a>
+    `;
+    document.querySelector(".result").insertBefore(downloads, finalEl);
+
+    const scriptDocxLink = document.querySelector("#script-docx");
+    const notesDocxLink = document.querySelector("#notes-docx");
+
+    renderStages();
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      submit.disabled = true;
+      finalEl.textContent = "Creating job...";
+
+      try {
+        const response = await fetch("/api/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: form.name.value,
+            brief: form.brief.value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Job creation failed");
+        watchJob(data.job.id);
+      } catch (error) {
+        finalEl.textContent = error.message;
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    loadDemo.addEventListener("click", () => {
+      const id = prompt("Paste a Supabase script_jobs id");
+      if (id) watchJob(id.trim());
+    });
+
+    function watchJob(id) {
+      activeJobId = id;
+      jobLabel.textContent = `Job ${id}`;
+      if (pollTimer) clearInterval(pollTimer);
+      poll();
+      pollTimer = setInterval(poll, 2500);
+    }
+
+    async function poll() {
+      if (!activeJobId) return;
+      const response = await fetch(`/api/jobs/status?id=${encodeURIComponent(activeJobId)}`);
+      const data = await response.json();
+      if (!response.ok) {
+        eventsEl.textContent = data.error || "Could not load job.";
+        return;
+      }
+
+      renderStages(data.job.current_stage, data.job.status);
+      renderEvents(data.events);
+      renderDirections(data.job, data.artifacts);
+      renderCritique(data.artifacts);
+      renderFinal(data.artifacts);
+      renderDownloads(data.artifacts);
+
+      if (["complete", "failed", "canceled", "waiting_for_direction"].includes(data.job.status)) {
+        clearInterval(pollTimer);
+      }
+    }
+
+    feedbackForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!activeJobId) {
+        feedbackStatus.textContent = "Load a job before saving feedback.";
+        return;
+      }
+
+      feedbackSubmit.disabled = true;
+      feedbackStatus.textContent = "Saving feedback...";
+
+      try {
+        const response = await fetch("/api/jobs/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobId: activeJobId,
+            rating: feedbackForm.rating.value,
+            verdict: feedbackForm.verdict.value,
+            comment: feedbackForm.comment.value,
+            promoteToGold: feedbackForm.promoteToGold.checked
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Feedback save failed");
+        feedbackStatus.textContent = "Feedback saved.";
+        poll();
+      } catch (error) {
+        feedbackStatus.textContent = error.message;
+      } finally {
+        feedbackSubmit.disabled = false;
+      }
+    });
+
+    function renderStages(current = "", status = "") {
+      stagesEl.innerHTML = "";
+      for (const [key, label] of stageLabels) {
+        const div = document.createElement("div");
+        div.className = "stage";
+        if (current === key) div.classList.add("active");
+        if (status === "complete") div.classList.add("done");
+        div.innerHTML = `<strong>${label}</strong><small>${key}</small>`;
+        stagesEl.appendChild(div);
+      }
+    }
+
+    function renderEvents(events) {
+      if (!events?.length) {
+        eventsEl.textContent = "No events yet.";
+        return;
+      }
+      eventsEl.innerHTML = events.map((event) =>
+        `<div class="event"><strong>${escapeHtml(event.stage)}</strong><br>${escapeHtml(event.message)}</div>`
+      ).join("");
+      eventsEl.scrollTop = eventsEl.scrollHeight;
+    }
+
+    function renderDirections(job, artifacts) {
+      const strategy = latestArtifact(artifacts, "strategy");
+      const directions = strategy?.content?.directions || [];
+      if (job?.status !== "waiting_for_direction" || directions.length === 0) {
+        directionPanel.classList.add("hidden");
+        directionPanel.innerHTML = "";
+        return;
+      }
+
+      directionPanel.classList.remove("hidden");
+      directionPanel.innerHTML = `
+        <h3>Choose Direction</h3>
+        <p>The strategist found multiple valid ways in. Pick one and the worker will continue.</p>
+        ${directions.map((direction) => `
+          <div class="direction-card">
+            <strong>${escapeHtml(direction.name)}</strong>
+            <p>${escapeHtml(direction.whatMakesItWork || direction.coreEngine || "")}</p>
+            <button type="button" data-direction-id="${escapeHtml(direction.id)}">Use This Direction</button>
+          </div>
+        `).join("")}
+      `;
+
+      directionPanel.querySelectorAll("button[data-direction-id]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          const directionId = button.getAttribute("data-direction-id");
+          const response = await fetch("/api/jobs/select-direction", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jobId: activeJobId, directionId })
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            button.disabled = false;
+            eventsEl.textContent = data.error || "Could not select direction.";
+            return;
+          }
+          watchJob(activeJobId);
+        });
+      });
+    }
+
+    function renderCritique(artifacts) {
+      const critique = latestArtifact(artifacts, "critique")?.content;
+      if (!critique) {
+        critiqueSummary.textContent = "Waiting for critique.";
+        return;
+      }
+
+      const findings = (critique.findings || []).slice(0, 3).map((finding) => {
+        if (typeof finding === "string") return finding;
+        return finding.issue || finding.fix || JSON.stringify(finding);
+      });
+
+      critiqueSummary.innerHTML = `
+        <strong>Score:</strong> ${escapeHtml(critique.score ?? "Not scored")}
+        <br><strong>Passed:</strong> ${critique.passes ? "Yes" : "No"}
+        ${findings.length ? `<ul>${findings.map((finding) => `<li>${escapeHtml(finding)}</li>`).join("")}</ul>` : ""}
+      `;
+    }
+
+    function renderFinal(artifacts) {
+      const final = artifacts?.find((artifact) => artifact.type === "client_script")
+        || artifacts?.find((artifact) => artifact.type === "final_script");
+      if (final?.markdown) {
+        finalEl.textContent = final.markdown;
+      } else {
+        finalEl.textContent = "Waiting for final script.";
+      }
+    }
+
+    function renderDownloads(artifacts) {
+      const hasScript = artifacts?.some((artifact) => artifact.type === "client_script" || artifact.type === "final_script");
+      const hasNotes = artifacts?.some((artifact) => artifact.type === "producer_notes");
+
+      if (activeJobId && hasScript) {
+        scriptDocxLink.href = `/api/jobs/document?id=${encodeURIComponent(activeJobId)}&kind=script`;
+        scriptDocxLink.setAttribute("aria-disabled", "false");
+      } else {
+        scriptDocxLink.removeAttribute("href");
+        scriptDocxLink.setAttribute("aria-disabled", "true");
+      }
+
+      if (activeJobId && hasNotes) {
+        notesDocxLink.href = `/api/jobs/document?id=${encodeURIComponent(activeJobId)}&kind=notes`;
+        notesDocxLink.setAttribute("aria-disabled", "false");
+      } else {
+        notesDocxLink.removeAttribute("href");
+        notesDocxLink.setAttribute("aria-disabled", "true");
+      }
+    }
+
+    function latestArtifact(artifacts, type) {
+      return [...(artifacts || [])].reverse().find((artifact) => artifact.type === type);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+</body>
+</html>

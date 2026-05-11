@@ -1,0 +1,17 @@
+node_modules/
+.DS_Store
+
+.env
+.env.*
+!.env.example
+
+.netlify/
+.vercel/
+dist/
+tmp/
+outputs/
+*.log
+
+# Raw client materials should stay local unless StudioNow explicitly approves
+# committing them to the private pilot repo.
+training_drop/

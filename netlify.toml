@@ -1,0 +1,8 @@
+[build]
+  base = "."
+  publish = "apps/web/public"
+  command = "echo 'Static prototype, no build step'"
+
+[functions]
+  directory = "apps/web/netlify/functions"
+  node_bundler = "esbuild"

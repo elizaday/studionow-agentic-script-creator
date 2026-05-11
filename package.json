@@ -1,0 +1,25 @@
+{
+  "name": "studionow-agentic",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:web": "node apps/web/dev-server.mjs",
+    "worker": "node apps/worker/src/index.mjs",
+    "demo": "node scripts/run-local.mjs --brief evals/briefs.json",
+    "demo:quick": "node scripts/run-local.mjs --quick",
+    "brief": "node scripts/run-brief.mjs",
+    "check": "node scripts/run-local.mjs --quick --assert",
+    "training:ingest": "node scripts/ingest-training-examples.mjs",
+    "examples:ingest": "node scripts/ingest-example-library.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "docx": "^9.5.1",
+    "dotenv": "^17.3.1",
+    "openai": "^6.8.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
