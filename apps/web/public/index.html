@@ -344,6 +344,15 @@ Existing Assets: Pulse UI screenshots, TCCC internal brand guidelines.
 Missing Assets: Screen recordings of Pulse in action, motion graphics for data visualization demos.
 Must-Haves: Platform name by :15, three core capabilities, Q3 2026 rollout date, sign-up CTA.</textarea>
 
+        <div style="height: 14px"></div>
+
+        <label for="files">Attachments (optional)</label>
+        <input id="files" name="files" type="file" multiple accept="image/*,.pdf,application/pdf">
+        <p id="file-summary" style="margin: 6px 0 0; font-size: 12px; color: var(--muted);">Add PDFs (deck or brief) and images. PDFs are auto-split into per-page visuals. Total upload should stay under 30MB.</p>
+        <ul id="file-list" style="margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted);"></ul>
+
+        <div style="height: 14px"></div>
+
         <div class="actions">
           <button id="submit" type="submit">Create Job</button>
           <button class="secondary" id="load-demo" type="button">Load Demo Job</button>
@@ -448,18 +457,63 @@ Must-Haves: Platform name by :15, three core capabilities, Q3 2026 rollout date,
 
     renderStages();
 
+    const filesInput = document.querySelector("#files");
+    const fileListEl = document.querySelector("#file-list");
+    const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
+    filesInput.addEventListener("change", () => {
+      const files = Array.from(filesInput.files || []);
+      const total = files.reduce((sum, file) => sum + file.size, 0);
+      const items = files.map((file) => {
+        const kb = Math.round(file.size / 1024);
+        const sizeText = kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
+        return `<li>${escapeHtml(file.name)} <span style="color:#9aa1a8;">(${sizeText})</span></li>`;
+      });
+      if (total > MAX_TOTAL_BYTES) {
+        items.push(`<li style="color: var(--red); list-style: none; margin-left: -18px; margin-top: 4px;">⚠ Total upload is ${(total / (1024 * 1024)).toFixed(1)} MB. Limit is 25 MB. Submit will fail — remove a file or export your PDF at lower resolution.</li>`);
+      }
+      fileListEl.innerHTML = items.join("") || "";
+    });
+
+    async function readFilesAsAttachments(fileList) {
+      const out = [];
+      for (const file of fileList) {
+        const base64 = await new Promise((resolveRead, rejectRead) => {
+          const reader = new FileReader();
+          reader.onload = () => resolveRead(String(reader.result || "").split(",")[1] || "");
+          reader.onerror = () => rejectRead(reader.error || new Error("File read failed"));
+          reader.readAsDataURL(file);
+        });
+        out.push({
+          filename: file.name,
+          source: file.name,
+          mediaType: file.type || guessMediaType(file.name),
+          base64
+        });
+      }
+      return out;
+    }
+
+    function guessMediaType(name) {
+      const ext = name.split(".").pop().toLowerCase();
+      const map = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", pdf: "application/pdf" };
+      return map[ext] || "application/octet-stream";
+    }
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       submit.disabled = true;
-      finalEl.textContent = "Creating job...";
+      finalEl.textContent = "Reading attachments...";
 
       try {
+        const attachments = await readFilesAsAttachments(filesInput.files || []);
+        finalEl.textContent = "Creating job...";
         const response = await fetch("/api/jobs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: form.name.value,
-            brief: form.brief.value
+            brief: form.brief.value,
+            attachments
           })
         });
         const data = await response.json();

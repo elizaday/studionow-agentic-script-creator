@@ -24,6 +24,7 @@ import {
 } from "./stage-schemas.mjs";
 import { evaluateRuntimeHonesty, resolveRuntimeTargets } from "./runtime-gate.mjs";
 import { computeCostUsd } from "./model/pricing.mjs";
+import { pdfToImageAttachments } from "./pdf-extract.mjs";
 
 export async function runStudioNowWorkflow({
   rootDir,
@@ -33,8 +34,11 @@ export async function runStudioNowWorkflow({
   maxRevisionLoops = 1
 }) {
   const rawBrief = normalizeBrief(job.brief);
-  const rawAttachments = rawBrief.attachments || [];
-  const brief = stripBinaryAttachments(rawBrief);
+  const incomingAttachments = rawBrief.attachments || [];
+  const expandedAttachments = await expandPdfAttachments(incomingAttachments);
+  const rawAttachments = expandedAttachments;
+  const briefWithExpanded = { ...rawBrief, attachments: expandedAttachments };
+  const brief = stripBinaryAttachments(briefWithExpanded);
   const attachments = brief.attachmentSummary || [];
   const totals = createCostTotals();
 
@@ -485,6 +489,36 @@ function createCostTotals() {
     unpricedStages: 0,
     modelName: null
   };
+}
+
+async function expandPdfAttachments(attachments) {
+  if (!Array.isArray(attachments) || attachments.length === 0) return [];
+  const out = [];
+  let assetIndex = 1;
+  for (const file of attachments) {
+    if (!file) continue;
+    if (file.mediaType === "application/pdf" && file.base64) {
+      const pages = await pdfToImageAttachments({
+        pdfBase64: file.base64,
+        source: file.source || file.filename || "uploaded pdf",
+        filename: file.filename || null,
+        startAssetIndex: assetIndex
+      });
+      out.push(...pages);
+      assetIndex += pages.length;
+      continue;
+    }
+    if (file.mediaType && file.base64) {
+      out.push({
+        ...file,
+        id: file.id || `asset-${assetIndex}`
+      });
+      assetIndex += 1;
+      continue;
+    }
+    out.push(file);
+  }
+  return out;
 }
 
 function stripBinaryAttachments(brief) {
