@@ -1,8 +1,8 @@
 import { stringifyForPrompt } from "../json.mjs";
 
-export async function runAgent({ modelClient, agentName, system, payload, instructions }) {
+export async function runAgent({ modelClient, agentName, system, payload, instructions, images }) {
   const user = `${instructions.trim()}\n\nReturn only valid JSON. No markdown fencing.\n\nPAYLOAD:\n${stringifyForPrompt(payload)}`;
-  return modelClient.generateJson({ agentName, system, user });
+  return modelClient.generateJson({ agentName, system, user, images });
 }
 
 export function baseSystem({ role, references = "" }) {

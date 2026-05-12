@@ -3,6 +3,24 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { extractJson } from "../json.mjs";
 
+function buildUserContent(user, images) {
+  if (!Array.isArray(images) || images.length === 0) {
+    return user;
+  }
+  const parts = [{ type: "input_text", text: typeof user === "string" ? user : String(user ?? "") }];
+  for (const image of images) {
+    if (!image) continue;
+    const url = image.dataUrl || (image.base64 && image.mediaType
+      ? `data:${image.mediaType};base64,${image.base64}`
+      : null);
+    if (!url) continue;
+    const block = { type: "input_image", image_url: url };
+    if (image.detail) block.detail = image.detail;
+    parts.push(block);
+  }
+  return parts;
+}
+
 async function saveFailedResponse(agentName, text, error) {
   try {
     const dir = process.env.OPENAI_DEBUG_DIR || resolve(process.cwd(), "outputs", "failed-responses");
@@ -18,13 +36,15 @@ async function saveFailedResponse(agentName, text, error) {
 
 export function createOpenAIModelClient({
   apiKey = process.env.OPENAI_API_KEY,
-  model = process.env.OPENAI_MODEL || "gpt-5.4"
+  model = process.env.OPENAI_MODEL || "gpt-5",
+  timeoutMs = Number(process.env.OPENAI_TIMEOUT_MS) || 1500000,
+  maxRetries = Number(process.env.OPENAI_MAX_RETRIES) || 1
 } = {}) {
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is required for the real model client");
   }
 
-  const client = new OpenAI({ apiKey });
+  const client = new OpenAI({ apiKey, timeout: timeoutMs, maxRetries });
   let lastMeta = null;
 
   return {
@@ -32,13 +52,14 @@ export function createOpenAIModelClient({
     getLastResponseMeta() {
       return lastMeta;
     },
-    async generateJson({ agentName, system, user }) {
+    async generateJson({ agentName, system, user, images = [] }) {
       lastMeta = null;
+      const userContent = buildUserContent(user, images);
       const response = await client.responses.create({
         model,
         input: [
           { role: "system", content: system },
-          { role: "user", content: user }
+          { role: "user", content: userContent }
         ],
         text: { format: { type: "json_object" } }
       });

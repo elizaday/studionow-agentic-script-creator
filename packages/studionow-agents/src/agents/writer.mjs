@@ -9,13 +9,15 @@ export async function runWriter({
   mined,
   strategy,
   blueprint,
+  visualInventory = null,
   currentDraft = null,
   runtimeEdit = null,
   critique = null
 }) {
   const isRevision = Boolean(currentDraft && critique);
   const system = baseSystem({ role: "Script Writer", references });
-  const payload = { brief, diagnosis, mined, strategy, blueprint, currentDraft, runtimeEdit, critique };
+  const hasInventory = Array.isArray(visualInventory?.inventory) && visualInventory.inventory.length > 0;
+  const payload = { brief, diagnosis, mined, strategy, blueprint, currentDraft, runtimeEdit, critique, visualInventory: hasInventory ? visualInventory : null };
   const result = await runAgent({
     modelClient,
     agentName: "writer",
@@ -48,7 +50,9 @@ Script requirements:
 - No em dashes.
 - Do not overwrite.
 - If this is a revision, remove any embedded critique comments from the previous draft.
-- markdown must contain only the client-facing script. Do not include producer notes, critique, explanations, or extra sections.`
+- markdown must contain only the client-facing script. Do not include producer notes, critique, explanations, or extra sections.${hasInventory
+  ? `\n- A visualInventory is attached in the payload. When a row uses an existing asset from that inventory, reference it inline in the VISUALS cell using the format [asset-id] followed by a brief in-script description. Example: "[asset-3] (existing) Wide shot of bottling line, camera dollies right." Use the asset id exactly as it appears in the inventory.\n- For rows that need new footage, use a source tag like (to-shoot), (motion graphics), or (stock) and describe the shot.\n- Use blueprint structure.assetIds as a guide to which row each asset belongs in.\n- Never reference an asset id that is not in the inventory.`
+  : ""}`
   });
 
   if (parseThreeColumnScriptTable(result.markdown).ok) return result;

@@ -16,6 +16,17 @@ function isStringArray(v) {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
 }
 
+export function validateVisualInventory(data) {
+  const label = "visual_intake contract";
+  assert(data && typeof data === "object" && !Array.isArray(data), `${label}: root must be an object`);
+  assert(Array.isArray(data.inventory), `${label}: inventory must be an array`);
+  for (const entry of data.inventory) {
+    assert(entry && typeof entry === "object", `${label}: inventory entry must be an object`);
+    assert(isNonEmptyString(entry.id), `${label}: inventory entry "id" required`);
+    assert(isNonEmptyString(entry.description), `${label}: inventory entry "description" required`);
+  }
+}
+
 export function validateDiagnosis(data) {
   const label = "diagnoser contract";
   assert(data && typeof data === "object" && !Array.isArray(data), `${label}: root must be an object`);

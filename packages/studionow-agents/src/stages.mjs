@@ -1,6 +1,7 @@
 export const STAGES = Object.freeze({
   DIAGNOSIS: "diagnosis",
   MINING: "source_mining",
+  VISUAL_INTAKE: "visual_intake",
   STRATEGY: "strategy",
   BLUEPRINT: "blueprint",
   DRAFT: "draft",
@@ -23,6 +24,7 @@ export const STATUS = Object.freeze({
 export const AGENTS = Object.freeze({
   DIAGNOSER: "diagnoser",
   MINER: "miner",
+  VISUAL_INTAKE: "visual_intake",
   STRATEGIST: "strategist",
   PRODUCER: "producer",
   WRITER: "writer",

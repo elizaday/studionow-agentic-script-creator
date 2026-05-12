@@ -2,6 +2,7 @@ import { STATUS, STAGES } from "./stages.mjs";
 import { loadReferencePack } from "./reference-loader.mjs";
 import { runDiagnoser } from "./agents/diagnoser.mjs";
 import { runMiner } from "./agents/miner.mjs";
+import { runVisualIntake } from "./agents/visual-intake.mjs";
 import { runStrategist } from "./agents/strategist.mjs";
 import { runProducer } from "./agents/producer.mjs";
 import { runWriter } from "./agents/writer.mjs";
@@ -13,6 +14,7 @@ import { formatExamplesForAgent, selectRelevantExamples } from "./example-memory
 import {
   validateDiagnosis,
   validateMined,
+  validateVisualInventory,
   validateStrategy,
   validateBlueprint,
   validateDraft,
@@ -30,8 +32,10 @@ export async function runStudioNowWorkflow({
   repository,
   maxRevisionLoops = 1
 }) {
-  const brief = normalizeBrief(job.brief);
-  const attachments = brief.attachments || [];
+  const rawBrief = normalizeBrief(job.brief);
+  const rawAttachments = rawBrief.attachments || [];
+  const brief = stripBinaryAttachments(rawBrief);
+  const attachments = brief.attachmentSummary || [];
   const totals = createCostTotals();
 
   await repository.updateJob(job.id, { status: STATUS.RUNNING, current_stage: STAGES.DIAGNOSIS });
@@ -77,6 +81,38 @@ export async function runStudioNowWorkflow({
     }
   });
   await repository.artifact(job.id, "source_mining", "Source Mining", mined);
+
+  const imageAttachments = collectImageAttachments(rawAttachments);
+  let visualInventory = { inventory: [], notes: "" };
+  if (imageAttachments.length > 0) {
+    await repository.updateJob(job.id, { current_stage: STAGES.VISUAL_INTAKE });
+    await repository.event(
+      job.id,
+      STAGES.VISUAL_INTAKE,
+      `Running visual intake on ${imageAttachments.length} attached image(s).`
+    );
+    visualInventory = await withStageMetrics({
+      modelClient,
+      repository,
+      jobId: job.id,
+      totals,
+      stage: STAGES.VISUAL_INTAKE,
+      agentName: "visual_intake",
+      run: async () => {
+        const out = await runVisualIntake({
+          modelClient,
+          references: await loadReferencePack(rootDir, ["production", "voice"]),
+          brief,
+          diagnosis,
+          mined,
+          imageAttachments
+        });
+        validateVisualInventory(out);
+        return out;
+      }
+    });
+    await repository.artifact(job.id, "visual_inventory", "Visual Inventory", visualInventory);
+  }
 
   const relevantExamples = selectRelevantExamples({
     rootDir,
@@ -173,7 +209,8 @@ export async function runStudioNowWorkflow({
         brief,
         diagnosis,
         mined,
-        strategy
+        strategy,
+        visualInventory
       });
       validateBlueprint(out);
       return out;
@@ -198,7 +235,8 @@ export async function runStudioNowWorkflow({
         diagnosis,
         mined,
         strategy,
-        blueprint
+        blueprint,
+        visualInventory
       });
       validateDraft(out);
       return out;
@@ -216,6 +254,7 @@ export async function runStudioNowWorkflow({
       modelClient,
       repository,
       jobId: job.id,
+      totals,
       stage: STAGES.RUNTIME,
       agentName: "runtime_editor",
       run: async () => {
@@ -259,6 +298,7 @@ export async function runStudioNowWorkflow({
       modelClient,
       repository,
       jobId: job.id,
+      totals,
       stage: STAGES.CRITIQUE,
       agentName: "critic",
       run: async () => {
@@ -285,6 +325,7 @@ export async function runStudioNowWorkflow({
       modelClient,
       repository,
       jobId: job.id,
+      totals,
       stage: STAGES.REVISION,
       agentName: "writer",
       run: async () => {
@@ -381,7 +422,7 @@ export async function runStudioNowWorkflow({
   });
   await repository.event(job.id, STAGES.FINAL, "Workflow complete.", "info", { kind: "workflow_complete" });
 
-  return { status: STATUS.COMPLETE, diagnosis, mined, strategy, blueprint, draft, runtimeEdit, critique, final: preparedFinal, totals };
+  return { status: STATUS.COMPLETE, diagnosis, mined, visualInventory, strategy, blueprint, draft, runtimeEdit, critique, final: preparedFinal, totals };
 }
 
 function formatTotalsMessage(totals) {
@@ -444,6 +485,45 @@ function createCostTotals() {
     unpricedStages: 0,
     modelName: null
   };
+}
+
+function stripBinaryAttachments(brief) {
+  if (!brief || typeof brief !== "object") return brief;
+  const { attachments, ...rest } = brief;
+  if (!Array.isArray(attachments) || attachments.length === 0) {
+    return rest;
+  }
+  const summary = attachments.map((file) => {
+    if (!file) return null;
+    return {
+      id: file.id || null,
+      source: file.source || file.filename || "uploaded",
+      filename: file.filename || null,
+      mediaType: file.mediaType || null,
+      hasImage: Boolean(file.base64)
+    };
+  }).filter(Boolean);
+  return { ...rest, attachmentSummary: summary };
+}
+
+function collectImageAttachments(attachments) {
+  if (!Array.isArray(attachments)) return [];
+  const out = [];
+  let counter = 0;
+  for (const file of attachments) {
+    if (!file || !file.base64 || !file.mediaType) continue;
+    if (!String(file.mediaType).startsWith("image/")) continue;
+    counter += 1;
+    out.push({
+      id: file.id || `asset-${counter}`,
+      source: file.source || file.filename || "uploaded image",
+      filename: file.filename || null,
+      mediaType: file.mediaType,
+      base64: file.base64,
+      detail: file.detail
+    });
+  }
+  return out;
 }
 
 function stripModelPrefix(name) {
