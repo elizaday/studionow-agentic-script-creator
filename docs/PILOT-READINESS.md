@@ -22,7 +22,7 @@ The pilot should answer three questions:
 ## Weak Today
 
 - Authentication is not in place. Do not expose client briefs publicly.
-- File upload is not a polished product path yet. Local runners can process PDFs, but the web UI is still paste-first.
+- File upload is pilot-grade, not production-grade. The web UI can accept images and PDFs, and the worker can convert PDFs into page images for visual intake, but uploaded files are not yet managed as durable assets with ownership and review status.
 - Gold promotion is captured as a signal, but not yet a full review workflow that stores the final human-edited script.
 - The UI is functional but still prototype-level. It needs a clearer review experience before StudioNow-wide usage.
 - Example retrieval is file-backed. That is good for speed now, but DB-backed examples will be cleaner once reviewers start adding feedback.
@@ -39,7 +39,7 @@ The pilot should answer three questions:
 
 - Authentication for StudioNow users.
 - Basic job ownership: who submitted, who reviewed, who approved.
-- File upload and storage for briefs, decks, reference scripts, and final human edits.
+- Durable file storage for briefs, decks, reference scripts, uploaded visuals, and final human edits.
 - A "promote to gold" workflow that requires the final human-approved script, not just the model draft.
 - A reviewer dashboard for jobs needing feedback.
 - A small evaluation set that represents StudioNow's most common work: sizzle, explainer, award case, internal opener, social cutdown.

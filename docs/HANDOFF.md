@@ -32,8 +32,8 @@ This document is for the meeting where ownership of the Script Agentic project t
 These need to be addressed before wider StudioNow usage. None is a redesign — each is bounded work.
 
 - **No authentication.** Anyone with the deployed URL can submit briefs. Required before exposing confidential client material.
-- **No file upload for images or PDFs.** Current intake is paste-text only. Real StudioNow briefs often arrive as PDF decks. Scoped at roughly half a week of work; deferred by Eli's direction.
-- **No deployment.** The project has never been deployed to Vercel or any other host. Local-only.
+- **File upload exists, but is still pilot-grade.** The web UI accepts images and PDFs, PDFs are converted into page images, and the Visual Intake agent inventories attached visuals. This is enough for pilot testing. It is not yet a production asset-management system because uploaded files are not stored in a durable asset library with ownership, permissions, or review status.
+- **No deployment.** The project has not yet been pushed to a remote GitHub repo or deployed to Vercel or a worker host. Local-only.
 - **No gold-promotion workflow.** Reviewers can flag a draft as a gold candidate, but there is no path to upload the final human-edited script that closes the learning loop.
 - **No automated tests.** The smoke check exercises the mock workflow but does not validate schemas, runtime gate edge cases, or repository behavior under stress.
 - **Stage counter undercounts.** The "stages" field in the final totals event reports fewer stages than ran. Cost number is correct; stage attribution is off. Minor.
