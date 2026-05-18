@@ -11,7 +11,8 @@
     "brief": "node scripts/run-brief.mjs",
     "check": "node scripts/run-local.mjs --quick --assert",
     "training:ingest": "node scripts/ingest-training-examples.mjs",
-    "examples:ingest": "node scripts/ingest-example-library.mjs"
+    "examples:ingest": "node scripts/ingest-example-library.mjs",
+    "gold:ingest": "node scripts/ingest-gold-candidates.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

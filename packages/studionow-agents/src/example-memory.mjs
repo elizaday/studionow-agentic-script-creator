@@ -72,7 +72,7 @@ ${sections.join("\n\n")}`;
 }
 
 function scoreExample(example, queryTokens) {
-  let score = 0;
+  let relevance = 0;
   const fields = {
     tags: tokenize(example.tags?.join(" ")),
     identity: tokenize([example.projectName, example.notes].filter(Boolean).join("\n")),
@@ -81,19 +81,34 @@ function scoreExample(example, queryTokens) {
   };
 
   for (const token of queryTokens) {
-    if (fields.tags.has(token)) score += 6;
-    if (fields.identity.has(token)) score += 4;
-    if (fields.teaching.has(token)) score += 2;
-    if (fields.script.has(token)) score += 1;
+    if (fields.tags.has(token)) relevance += 6;
+    if (fields.identity.has(token)) relevance += 4;
+    if (fields.teaching.has(token)) relevance += 2;
+    if (fields.script.has(token)) relevance += 1;
   }
 
-  if (example.quality === "gold") score += 4;
-  if (example.quality === "usable") score += 2;
-  if (example.pairingConfidence === "high") score += 2;
-  if (example.pairingType?.includes("orphan")) score -= 1;
+  if (example.pairingConfidence === "high") relevance += 2;
+  if (example.pairingType?.includes("orphan")) relevance -= 1;
 
-  return score;
+  const qualityMultiplier = QUALITY_MULTIPLIERS[example.quality] ?? 1.0;
+  const qualityFloor = QUALITY_FLOOR[example.quality] ?? 0;
+
+  return Math.round((relevance + qualityFloor) * qualityMultiplier * 100) / 100;
 }
+
+const QUALITY_MULTIPLIERS = {
+  gold: 1.5,
+  usable: 1.0,
+  low_confidence: 0.7,
+  reject: 0
+};
+
+const QUALITY_FLOOR = {
+  gold: 6,
+  usable: 2,
+  low_confidence: 0,
+  reject: 0
+};
 
 function tokenize(value) {
   const tokens = new Set();

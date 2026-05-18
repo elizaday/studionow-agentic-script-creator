@@ -94,6 +94,46 @@ create table if not exists public.script_examples (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.script_gold_candidates (
+  id uuid primary key default gen_random_uuid(),
+  job_id uuid not null references public.script_jobs(id) on delete cascade,
+  artifact_id uuid references public.script_artifacts(id) on delete set null,
+  reviewer_name text,
+  reviewer_email text,
+  brief_text text not null,
+  agent_draft_markdown text,
+  final_script_text text not null,
+  final_script_filename text,
+  final_script_media_type text,
+  final_script_base64 text,
+  why_gold text,
+  what_changed text,
+  status text not null default 'pending',
+  reviewed_by text,
+  reviewed_at timestamptz,
+  rejection_reason text,
+  promoted_example_key text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.script_gold_candidates
+  drop constraint if exists script_gold_candidates_status_check;
+alter table public.script_gold_candidates
+  add constraint script_gold_candidates_status_check
+  check (status in ('pending', 'approved', 'rejected', 'ingested'));
+
+create index if not exists script_gold_candidates_status_idx
+  on public.script_gold_candidates(status, created_at);
+
+create index if not exists script_gold_candidates_job_id_idx
+  on public.script_gold_candidates(job_id);
+
+drop trigger if exists script_gold_candidates_touch_updated_at on public.script_gold_candidates;
+create trigger script_gold_candidates_touch_updated_at
+before update on public.script_gold_candidates
+for each row execute function public.touch_script_job_updated_at();
+
 create table if not exists public.script_job_example_usage (
   id uuid primary key default gen_random_uuid(),
   job_id uuid not null references public.script_jobs(id) on delete cascade,
