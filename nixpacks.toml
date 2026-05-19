@@ -1,0 +1,12 @@
+# Railway / Render / any Nixpacks-based host build config.
+# poppler-utils provides pdftoppm and pdftotext, which the agent workflow
+# uses to expand PDF attachments into per-page images for Visual Intake.
+
+[phases.setup]
+aptPkgs = ["poppler-utils"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[start]
+cmd = "npm run worker"
