@@ -64,18 +64,115 @@ order by 1 desc;
 
 If reviewers stop leaving comments, the system stops improving. Substantive comments per week is the leading indicator of whether the pilot is healthy.
 
-## How to Add a Gold Example
+## Gold Promotion Workflow (Reviewer + Curator)
 
-A gold example is a brief paired with the final human-edited script that StudioNow would be proud to show as a reference.
+A gold example is a brief paired with the final human-edited script that StudioNow would be proud to show as a reference. The system retrieves gold examples first when finding taste references for new briefs.
 
-1. A reviewer flags a draft as a gold candidate using the feedback form.
-2. The curator confirms the candidate is genuinely strong and that a final human-edited version exists.
-3. Save the brief, the final human-edited script, and any context notes into a new entry alongside existing examples in the StudioNow example library.
-4. Re-run `npm run examples:ingest` (or the appropriate ingestion script).
-5. Verify the new example appears in `training/processed/example_memory.json` and shows up in retrieval on a relevant test brief.
-6. Commit the updated `example_memory.json` to Git.
+### Reviewer path (anyone who used the tool)
 
-Quality over quantity. Five sharp gold examples per quarter is far more valuable than fifty mixed-quality ones.
+1. Submit a brief and let the agent produce a draft.
+2. Hand-edit the draft into a client-ready final script in Word/Pages.
+3. In the web UI, scroll to the **Promote to Gold** panel (gold border).
+4. Either upload the final edited script as a `.docx`/`.txt`/`.md` file **or** paste it directly.
+5. Fill in **Why is this gold?** and **What did you change?** — these become teaching points.
+6. Submit. Status will be `pending` until the curator reviews.
+
+### Curator path (Mike)
+
+Daily/weekly, the curator reviews pending candidates and decides which become permanent gold examples.
+
+**1. See what's pending.** From the Supabase SQL editor:
+
+```sql
+select
+  gc.id,
+  gc.created_at,
+  gc.reviewer_name,
+  gc.why_gold,
+  gc.what_changed,
+  j.brief->>'name' as brief_name,
+  length(gc.final_script_text) as final_script_chars
+from public.script_gold_candidates gc
+left join public.script_jobs j on j.id = gc.job_id
+where gc.status = 'pending'
+order by gc.created_at;
+```
+
+**2. Read the pair for any candidate.** Replace `:candidate_id`:
+
+```sql
+select
+  brief_text,
+  agent_draft_markdown,
+  final_script_text,
+  why_gold,
+  what_changed,
+  reviewer_name
+from public.script_gold_candidates
+where id = ':candidate_id';
+```
+
+Read the brief, the agent's draft, and the human edit side by side. Is this a sharper, more specific, more produceable version that captures what good looks like for StudioNow? Quality over quantity. Five sharp gold examples per quarter is far more valuable than fifty mixed-quality ones.
+
+**3. Approve or reject.**
+
+To approve:
+
+```sql
+update public.script_gold_candidates
+set status = 'approved', reviewed_by = 'Mike', reviewed_at = now()
+where id = ':candidate_id';
+```
+
+To reject (and tell the reviewer why):
+
+```sql
+update public.script_gold_candidates
+set status = 'rejected',
+    reviewed_by = 'Mike',
+    reviewed_at = now(),
+    rejection_reason = 'Final script is too close to the agent draft — no meaningful curation signal.'
+where id = ':candidate_id';
+```
+
+**4. Ingest approved candidates into example memory.** Run from the repo:
+
+```bash
+npm run gold:ingest
+```
+
+This reads every `approved` candidate, appends it to `training/processed/example_memory.json` with `quality: "gold"`, and marks the candidate as `ingested` so it is not added twice. Use `--dry-run` to preview first.
+
+**5. Commit the updated example memory** so future runs use the new gold examples:
+
+```bash
+git add training/processed/example_memory.json
+git commit -m "Promote gold pair: <project name>"
+git push
+```
+
+**6. Redeploy the worker** so it picks up the new memory file. Restart the worker process on Railway/Render/Fly.
+
+### Why the quality boost matters
+
+The retrieval scorer multiplies relevance by quality:
+
+- **gold:** 1.5× multiplier + baseline floor of 6
+- **usable:** 1.0× multiplier + baseline floor of 2
+- **low_confidence:** 0.7× multiplier, no floor
+- **reject:** 0× multiplier (effectively removed)
+
+This means a moderately relevant gold example will usually outrank a highly relevant usable one, which is the design goal: train the agent's taste toward the work Mike has personally approved.
+
+### What "excellent" example coverage looks like
+
+The retrieval algorithm pulls the top three most relevant examples per brief. For excellent taste coverage on the briefs StudioNow actually sees:
+
+- Minimum viable: 10 paired gold examples spread across major formats.
+- Excellent for the pilot: 15–20 paired gold examples, with at least two per common format (sizzle, explainer, case study, brand film, opener).
+- Long-term strong: 30+, with multiple per format × brand × runtime.
+
+The system started with 5 paired examples in the library. Targeting 10 new paired gold examples in the first month of curation gets the system from "tries to find anything similar" to "reliably retrieves the right taste anchor."
 
 ## How to Re-Ingest Example Memory
 

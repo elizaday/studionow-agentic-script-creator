@@ -412,6 +412,36 @@ Must-Haves: Platform name by :15, three core capabilities, Q3 2026 rollout date,
           <button id="feedback-submit" type="submit">Save Feedback</button>
           <p id="feedback-status" style="margin-top: 10px"></p>
         </form>
+
+        <form class="panel" id="gold-form" style="margin-top: 18px; background: #fff8e1; border: 1px solid #e6c97f;">
+          <h3 style="margin: 0 0 4px; font-size: 15px; color: var(--gold);">Promote to Gold</h3>
+          <p style="margin: 0 0 12px; font-size: 12px; color: var(--muted);">
+            Submit the final human-edited script with the original brief.
+            Once Mike approves, this pair becomes a gold example the agent learns from.
+          </p>
+
+          <label for="gold-final-file">Final edited script (DOCX, TXT, or MD)</label>
+          <input id="gold-final-file" name="finalFile" type="file" accept=".txt,.md,.markdown,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown">
+
+          <div style="height: 10px"></div>
+
+          <label for="gold-final-text">Or paste the final edited script here</label>
+          <textarea id="gold-final-text" name="finalText" style="min-height: 120px" placeholder="Paste the final, client-ready script — the one a human polished after seeing the agent draft."></textarea>
+
+          <div style="height: 10px"></div>
+
+          <label for="gold-why">Why is this gold?</label>
+          <textarea id="gold-why" name="whyGold" style="min-height: 60px" placeholder="Example: Specific motif, honest runtime, no generic filler, producer notes were accurate."></textarea>
+
+          <label for="gold-changed">What did you change from the agent draft?</label>
+          <textarea id="gold-changed" name="whatChanged" style="min-height: 60px" placeholder="Example: Tightened the open, swapped asset-3 for new footage, rewrote the close to land the CTA."></textarea>
+
+          <label for="gold-reviewer">Reviewer (your name)</label>
+          <input id="gold-reviewer" name="reviewerName" type="text" placeholder="Your name">
+
+          <button id="gold-submit" type="submit" style="background: var(--gold);">Submit Gold Candidate</button>
+          <p id="gold-status" style="margin-top: 10px"></p>
+        </form>
       </div>
     </section>
   </main>
@@ -559,6 +589,77 @@ Must-Haves: Platform name by :15, three core capabilities, Q3 2026 rollout date,
         clearInterval(pollTimer);
       }
     }
+
+    const goldForm = document.querySelector("#gold-form");
+    const goldSubmit = document.querySelector("#gold-submit");
+    const goldStatus = document.querySelector("#gold-status");
+    const goldFileInput = document.querySelector("#gold-final-file");
+    const goldTextInput = document.querySelector("#gold-final-text");
+
+    async function readFinalScriptFile(file) {
+      if (!file) return null;
+      const ext = file.name.split(".").pop().toLowerCase();
+      const isText = ext === "txt" || ext === "md" || ext === "markdown" || (file.type || "").startsWith("text/");
+      if (isText) {
+        const text = await file.text();
+        return { text, filename: file.name, mediaType: file.type || "text/plain" };
+      }
+      const base64 = await new Promise((resolveRead, rejectRead) => {
+        const reader = new FileReader();
+        reader.onload = () => resolveRead(String(reader.result || "").split(",")[1] || "");
+        reader.onerror = () => rejectRead(reader.error || new Error("File read failed"));
+        reader.readAsDataURL(file);
+      });
+      return {
+        base64,
+        filename: file.name,
+        mediaType: file.type || "application/octet-stream"
+      };
+    }
+
+    goldForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!activeJobId) {
+        goldStatus.textContent = "Load a job before submitting a gold candidate.";
+        return;
+      }
+
+      goldSubmit.disabled = true;
+      goldStatus.textContent = "Reading final script...";
+
+      try {
+        const fileMeta = await readFinalScriptFile(goldFileInput.files?.[0]);
+        const pastedText = (goldTextInput.value || "").trim();
+        if (!fileMeta && !pastedText) {
+          throw new Error("Attach a file OR paste the final edited script.");
+        }
+
+        const finalScript = fileMeta
+          ? { ...fileMeta, text: fileMeta.text || pastedText }
+          : { text: pastedText };
+
+        goldStatus.textContent = "Submitting...";
+        const response = await fetch("/api/jobs/gold-candidate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobId: activeJobId,
+            finalScript,
+            whyGold: goldForm.whyGold.value,
+            whatChanged: goldForm.whatChanged.value,
+            reviewerName: goldForm.reviewerName.value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Gold candidate submission failed");
+        goldStatus.textContent = "Submitted. Mike will review the pair before it becomes a gold example.";
+        goldForm.reset();
+      } catch (error) {
+        goldStatus.textContent = error.message;
+      } finally {
+        goldSubmit.disabled = false;
+      }
+    });
 
     feedbackForm.addEventListener("submit", async (event) => {
       event.preventDefault();

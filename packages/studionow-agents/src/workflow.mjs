@@ -31,7 +31,8 @@ export async function runStudioNowWorkflow({
   modelClient,
   job,
   repository,
-  maxRevisionLoops = 1
+  maxRevisionLoops = 1,
+  maxCostUsd = Number(process.env.MAX_JOB_COST_USD || 2)
 }) {
   const rawBrief = normalizeBrief(job.brief);
   const incomingAttachments = rawBrief.attachments || [];
@@ -49,6 +50,7 @@ export async function runStudioNowWorkflow({
     repository,
     jobId: job.id,
     totals,
+    maxCostUsd,
     stage: STAGES.DIAGNOSIS,
     agentName: "diagnoser",
     run: async () => {
@@ -70,6 +72,7 @@ export async function runStudioNowWorkflow({
     repository,
     jobId: job.id,
     totals,
+    maxCostUsd,
     stage: STAGES.MINING,
     agentName: "miner",
     run: async () => {
@@ -100,6 +103,7 @@ export async function runStudioNowWorkflow({
       repository,
       jobId: job.id,
       totals,
+      maxCostUsd,
       stage: STAGES.VISUAL_INTAKE,
       agentName: "visual_intake",
       run: async () => {
@@ -163,6 +167,7 @@ export async function runStudioNowWorkflow({
     repository,
     jobId: job.id,
     totals,
+    maxCostUsd,
     stage: STAGES.STRATEGY,
     agentName: "strategist",
     run: async () => {
@@ -204,6 +209,7 @@ export async function runStudioNowWorkflow({
     repository,
     jobId: job.id,
     totals,
+    maxCostUsd,
     stage: STAGES.BLUEPRINT,
     agentName: "producer",
     run: async () => {
@@ -229,6 +235,7 @@ export async function runStudioNowWorkflow({
     repository,
     jobId: job.id,
     totals,
+    maxCostUsd,
     stage: STAGES.DRAFT,
     agentName: "writer",
     run: async () => {
@@ -259,6 +266,7 @@ export async function runStudioNowWorkflow({
       repository,
       jobId: job.id,
       totals,
+      maxCostUsd,
       stage: STAGES.RUNTIME,
       agentName: "runtime_editor",
       run: async () => {
@@ -303,6 +311,7 @@ export async function runStudioNowWorkflow({
       repository,
       jobId: job.id,
       totals,
+      maxCostUsd,
       stage: STAGES.CRITIQUE,
       agentName: "critic",
       run: async () => {
@@ -330,6 +339,7 @@ export async function runStudioNowWorkflow({
       repository,
       jobId: job.id,
       totals,
+      maxCostUsd,
       stage: STAGES.REVISION,
       agentName: "writer",
       run: async () => {
@@ -359,6 +369,7 @@ export async function runStudioNowWorkflow({
     repository,
     jobId: job.id,
     totals,
+    maxCostUsd,
     stage: STAGES.FINAL,
     agentName: "formatter",
     run: async () => {
@@ -437,7 +448,7 @@ function formatTotalsMessage(totals) {
   return `Run used ${tokens.toLocaleString()} tokens across ${totals.stages} stage(s). Estimated cost $${totals.costUsd.toFixed(4)}.`;
 }
 
-async function withStageMetrics({ modelClient, repository, jobId, stage, agentName, run, totals }) {
+async function withStageMetrics({ modelClient, repository, jobId, stage, agentName, run, totals, maxCostUsd }) {
   const started = Date.now();
   const result = await run();
   const durationMs = Date.now() - started;
@@ -477,6 +488,17 @@ async function withStageMetrics({ modelClient, repository, jobId, stage, agentNa
     cost_usd: cost.costUsd,
     price_source: cost.priceSource
   });
+
+  if (Number.isFinite(maxCostUsd) && maxCostUsd > 0 && totals && totals.costUsd > maxCostUsd) {
+    await repository.event(jobId, stage, `Aborting job: spent $${totals.costUsd.toFixed(4)}, over the $${maxCostUsd.toFixed(2)} cap.`, "error", {
+      kind: "cost_cap_exceeded",
+      total_cost_usd: totals.costUsd,
+      max_cost_usd: maxCostUsd
+    });
+    const err = new Error(`Cost cap exceeded: $${totals.costUsd.toFixed(4)} > $${maxCostUsd.toFixed(2)}`);
+    err.code = "COST_CAP_EXCEEDED";
+    throw err;
+  }
   return result;
 }
 
