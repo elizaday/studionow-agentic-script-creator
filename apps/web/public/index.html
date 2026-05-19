@@ -1,455 +1,735 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>StudioNow Agentic Script Creator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudioNow Script Creator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     :root {
-      --ink: #171717;
-      --muted: #5b6168;
-      --line: #d9dde2;
-      --paper: #ffffff;
-      --wash: #f6f7f8;
+      --dark: #191919;
+      --med: #555;
+      --light: #888;
+      --border: #e0e0e0;
+      --bg: #fafafa;
+      --white: #fff;
+      --blue: #0075FF;
+      --blue-dark: #0060d4;
       --red: #c91432;
       --green: #0a7b62;
       --gold: #9a6b00;
-      --focus: #2557a7;
+      --gold-bg: #fff8e1;
+      --gold-border: #e6c97f;
     }
-
-    * { box-sizing: border-box; }
 
     body {
-      margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--ink);
-      background: var(--wash);
-      line-height: 1.5;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--dark);
+      line-height: 1.6;
     }
 
-    header {
-      background: var(--ink);
-      color: var(--paper);
-      padding: 16px 24px;
-      border-bottom: 4px solid var(--red);
-    }
-
-    .topbar {
-      max-width: 1280px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .mark {
+    .header {
+      background: var(--dark);
+      padding: 16px 40px;
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-weight: 800;
-      letter-spacing: 0;
+      gap: 16px;
+    }
+    .header .subtitle {
+      color: rgba(255,255,255,0.9);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .header .divider {
+      width: 1px;
+      height: 20px;
+      background: rgba(255,255,255,0.2);
+    }
+    .header .tagline {
+      color: rgba(255,255,255,0.5);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
     }
 
-    .mark img {
-      width: 34px;
-      height: 34px;
-      object-fit: cover;
-      border-radius: 6px;
-    }
-
-    .subhead {
-      color: rgba(255,255,255,0.68);
-      font-size: 14px;
-    }
-
-    main {
-      max-width: 1280px;
+    .container {
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 28px 24px 44px;
-      display: grid;
-      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr);
-      gap: 24px;
-      align-items: start;
+      padding: 40px 24px;
     }
 
-    section {
-      background: var(--paper);
-      border: 1px solid var(--line);
+    .brief-section {
+      background: var(--white);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 22px;
+      padding: 32px;
+      margin-bottom: 32px;
+    }
+    .brief-section h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--dark);
+    }
+    .brief-section .description {
+      font-size: 14px;
+      color: var(--light);
+      margin-bottom: 24px;
     }
 
-    h1, h2, h3 {
-      margin: 0;
-      letter-spacing: 0;
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .form-grid .full-width {
+      grid-column: 1 / -1;
     }
 
-    h1 { font-size: 18px; }
-    h2 { font-size: 18px; margin-bottom: 6px; }
-    h3 { font-size: 14px; margin-bottom: 4px; }
-
-    p {
-      margin: 0 0 16px;
-      color: var(--muted);
+    .section-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
     }
+    .section-label:first-of-type { margin-top: 0; }
+
+    .required { color: #cc0000; font-weight: 400; }
 
     label {
       display: block;
-      font-weight: 700;
       font-size: 13px;
+      font-weight: 600;
+      color: var(--med);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 15px;
+      font-family: inherit;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--dark);
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .upload-zone, .brief-upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 6px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg);
+    }
+    .upload-zone:hover, .upload-zone.dragover,
+    .brief-upload-zone:hover, .brief-upload-zone.dragover {
+      border-color: var(--blue);
+      background: #eef6ff;
+    }
+    .upload-prompt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--med);
+      font-size: 14px;
+    }
+    .upload-icon {
+      font-size: 22px;
+      line-height: 1;
+      color: var(--light);
+      margin-bottom: 2px;
+    }
+    .upload-prompt strong { color: var(--blue); }
+    .upload-hint {
+      font-size: 12px;
+      color: var(--light);
+    }
+
+    .file-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .file-list:empty { margin-top: 0; }
+    .file-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--white); border: 1px solid var(--border);
+      padding: 5px 10px; border-radius: 6px; font-size: 13px;
+      color: var(--dark); max-width: 340px;
+    }
+    .file-chip .file-icon {
+      flex-shrink: 0; width: 18px; height: 18px;
+      border-radius: 3px; display: flex; align-items: center;
+      justify-content: center; font-size: 9px; font-weight: 700;
+      color: var(--white); text-transform: uppercase;
+    }
+    .file-icon.pdf { background: #e04040; }
+    .file-icon.doc { background: #2b5797; }
+    .file-icon.ppt { background: #d24726; }
+    .file-icon.img { background: #5a9e6f; }
+    .file-chip .file-name {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      flex: 1; min-width: 0;
+    }
+    .file-chip .file-size { color: var(--light); font-size: 11px; flex-shrink: 0; }
+    .file-chip .file-remove {
+      flex-shrink: 0; cursor: pointer; color: var(--light);
+      font-size: 16px; line-height: 1; padding: 0 2px;
+      transition: color 0.15s;
+    }
+    .file-chip .file-remove:hover { color: #cc0000; }
+    .file-total { font-size: 12px; color: var(--light); margin-top: 6px; }
+    .file-total.over-limit { color: #cc0000; }
+
+    .tone-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tone-chip {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--med); cursor: pointer;
+      font-family: inherit; font-size: 13px; font-weight: 500;
+      padding: 5px 14px; transition: all 0.15s;
+    }
+    .tone-chip:hover { border-color: var(--dark); color: var(--dark); }
+    .tone-chip.selected {
+      background: var(--dark); border-color: var(--dark); color: var(--white);
+    }
+    .tone-hint { font-size: 11px; color: var(--light); margin-top: 6px; }
+
+    .audio-toggle { display: flex; gap: 10px; }
+    .audio-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--med); cursor: pointer;
+      font-family: inherit; font-size: 14px; font-weight: 500;
+      padding: 9px 20px; transition: all 0.15s;
+    }
+    .audio-btn:hover { border-color: var(--dark); color: var(--dark); }
+    .audio-btn.selected {
+      background: var(--dark); border-color: var(--dark); color: var(--white);
+    }
+
+    .brief-mode-toggle {
+      display: inline-flex; border: 1px solid var(--border);
+      border-radius: 6px; overflow: hidden; margin-bottom: 8px;
+    }
+    .brief-mode-btn {
+      background: var(--bg); border: none; color: var(--med);
+      cursor: pointer; font-family: inherit; font-size: 12px;
+      font-weight: 600; padding: 5px 14px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .brief-mode-btn + .brief-mode-btn { border-left: 1px solid var(--border); }
+    .brief-mode-btn.active { background: var(--dark); color: var(--white); }
+
+    .btn-generate {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--blue); color: var(--white); border: none;
+      padding: 12px 32px; font-size: 15px; font-weight: 600;
+      border-radius: 6px; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-generate:hover { background: var(--blue-dark); }
+    .btn-generate:disabled { background: var(--border); cursor: not-allowed; }
+
+    .examples { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .examples p {
+      font-size: 13px; color: var(--light); margin-bottom: 8px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .example-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .example-chip {
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 6px 14px; font-size: 13px; border-radius: 20px;
+      cursor: pointer; transition: all 0.2s; color: var(--med);
+    }
+    .example-chip:hover { border-color: var(--blue); color: var(--blue); }
+
+    .error {
+      display: none; background: #fff5f5; border: 1px solid #ffcccc;
+      color: #cc0000; padding: 16px 20px; border-radius: 6px;
+      margin-bottom: 20px; font-size: 14px;
+    }
+    .error.active { display: block; }
+
+    .progress-section {
+      display: none;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 8px; padding: 24px 28px; margin-bottom: 24px;
+    }
+    .progress-section.active { display: block; }
+
+    .progress-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; gap: 16px;
+    }
+    .progress-header h3 {
+      font-size: 14px; font-weight: 700; color: var(--dark);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .progress-status {
+      font-size: 13px; color: var(--light); font-weight: 500;
+    }
+
+    .stages {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .stage {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      font-size: 12px;
+      color: var(--light);
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .stage strong { display: block; color: var(--med); font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+    .stage small { font-size: 10px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.3px; }
+    .stage.active {
+      background: #eef6ff; border-color: var(--blue);
+    }
+    .stage.active strong { color: var(--blue); }
+    .stage.done {
+      background: #e8f5ec; border-color: #b3d8c0;
+    }
+    .stage.done strong { color: var(--green); }
+
+    .events {
+      max-height: 200px; overflow-y: auto;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 12px 14px;
+      font-size: 12px; font-family: 'SF Mono', Menlo, Consolas, monospace;
+      color: var(--med);
+    }
+    .events .event { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .events .event:last-child { border-bottom: none; }
+    .events .event strong { color: var(--blue); font-family: inherit; font-weight: 600; }
+
+    .direction-panel {
+      background: #fff8e1; border: 1px solid #e6c97f;
+      border-radius: 8px; padding: 20px 24px; margin-bottom: 24px;
+    }
+    .direction-panel.hidden { display: none; }
+    .direction-panel h3 {
+      font-size: 15px; color: var(--gold); margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .direction-panel p { font-size: 13px; color: var(--med); margin-bottom: 14px; }
+    .direction-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 6px; padding: 14px 16px; margin-bottom: 10px;
+    }
+    .direction-card strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--dark); }
+    .direction-card p { font-size: 13px; color: var(--med); margin-bottom: 10px; }
+    .direction-card button {
+      background: var(--dark); color: var(--white); border: none;
+      padding: 7px 16px; font-size: 13px; font-weight: 600;
+      border-radius: 4px; cursor: pointer;
+    }
+    .direction-card button:hover { background: #333; }
+    .direction-card button:disabled { background: var(--border); cursor: not-allowed; }
+
+    .output-section {
+      display: none;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; margin-bottom: 24px;
+    }
+    .output-section.active { display: block; }
+
+    .output-header {
+      background: var(--dark); color: var(--white); padding: 16px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .output-header h3 {
+      font-size: 14px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .output-actions { display: flex; gap: 8px; }
+    .output-actions a, .output-actions button {
+      background: rgba(255,255,255,0.1); color: var(--white);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 6px 14px; font-size: 13px; border-radius: 4px;
+      cursor: pointer; transition: all 0.2s;
+      text-decoration: none;
+    }
+    .output-actions a[aria-disabled="true"] {
+      opacity: 0.4; cursor: not-allowed; pointer-events: none;
+    }
+    .output-actions a:hover, .output-actions button:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .script-content {
+      padding: 28px 32px; font-size: 14px; line-height: 1.7;
+      overflow-x: auto;
+    }
+    .script-content h1, .script-content h2, .script-content h3 {
+      margin-top: 18px; margin-bottom: 10px; font-weight: 700;
+    }
+    .script-content h1 { font-size: 20px; color: var(--blue); margin-top: 0; }
+    .script-content h2 { font-size: 16px; color: var(--dark); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
+    .script-content h3 { font-size: 14px; color: var(--med); }
+    .script-content p { margin-bottom: 8px; }
+    .script-content table {
+      width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;
+    }
+    .script-content th {
+      background: var(--blue); color: var(--white); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 10px 14px; text-align: left; font-size: 12px;
+    }
+    .script-content th:nth-child(1) { width: 28%; }
+    .script-content th:nth-child(2) { width: 8%; }
+    .script-content th:nth-child(3) { width: 64%; }
+    .script-content td {
+      padding: 10px 14px; border: 1px solid var(--border);
+      vertical-align: top; word-wrap: break-word; overflow-wrap: break-word;
+    }
+    .script-content tr:nth-child(even) td { background: #fafafa; }
+    .script-content td:nth-child(2) {
+      background: #f5f5f5; font-weight: 600; color: var(--blue); white-space: nowrap;
+    }
+    .script-content strong { font-weight: 700; }
+    .script-content em { font-style: italic; color: var(--med); }
+    .script-content ul, .script-content ol { margin: 8px 0 8px 24px; }
+    .script-content li { margin-bottom: 4px; }
+
+    .review-section {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 8px; padding: 24px 28px; margin-bottom: 24px;
+    }
+    .review-section.gold {
+      background: var(--gold-bg);
+      border-color: var(--gold-border);
+    }
+    .review-section h3 {
+      font-size: 14px; font-weight: 700; color: var(--dark);
+      text-transform: uppercase; letter-spacing: 0.5px;
       margin-bottom: 6px;
     }
-
-    textarea, input {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      font: inherit;
-      padding: 11px 12px;
-      background: #fbfbfc;
-      color: var(--ink);
+    .review-section.gold h3 { color: var(--gold); }
+    .review-section .description {
+      font-size: 13px; color: var(--light); margin-bottom: 16px;
     }
-
-    textarea {
-      min-height: 330px;
-      resize: vertical;
+    .review-section label { margin-top: 14px; }
+    .review-section label:first-of-type { margin-top: 0; }
+    .review-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
     }
-
-    textarea:focus, input:focus, button:focus {
-      outline: 2px solid var(--focus);
-      outline-offset: 2px;
+    .review-grid .full-width { grid-column: 1 / -1; }
+    .btn-feedback {
+      background: var(--dark); color: var(--white); border: none;
+      padding: 9px 22px; font-size: 14px; font-weight: 600;
+      border-radius: 6px; cursor: pointer; transition: background 0.2s;
+      margin-top: 16px;
     }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-top: 14px;
+    .btn-feedback:hover { background: #333; }
+    .btn-feedback.gold { background: var(--gold); }
+    .btn-feedback.gold:hover { background: #7d5600; }
+    .btn-feedback:disabled { background: var(--border); cursor: not-allowed; }
+    .review-status {
+      display: block; margin-top: 10px; font-size: 13px; color: var(--med);
     }
-
-    button {
-      border: 0;
-      border-radius: 6px;
-      background: var(--red);
-      color: var(--paper);
-      font: inherit;
-      font-weight: 800;
-      padding: 11px 14px;
-      cursor: pointer;
-      min-height: 44px;
-    }
-
-    button.secondary {
-      background: var(--ink);
-    }
-
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.55;
-    }
-
-    .status-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin: 18px 0 20px;
-    }
-
-    .stage {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px;
-      min-height: 78px;
-      background: #fbfbfc;
-    }
-
-    .stage.active {
-      border-color: var(--red);
-      box-shadow: inset 0 0 0 1px var(--red);
-    }
-
-    .stage.done {
-      border-color: var(--green);
-    }
-
-    .stage small {
-      color: var(--muted);
-      display: block;
-      margin-top: 4px;
-    }
-
-    .event-log {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      min-height: 140px;
-      max-height: 240px;
-      overflow: auto;
-      background: #fbfbfc;
-      padding: 12px;
-      font-size: 13px;
-    }
-
-    .event {
-      padding: 7px 0;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .event:last-child { border-bottom: 0; }
-
-    .result {
-      margin-top: 18px;
-      border-top: 1px solid var(--line);
-      padding-top: 18px;
-    }
-
-    .download-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin: 10px 0 16px;
-    }
-
-    .download-link {
-      display: inline-flex;
-      align-items: center;
-      min-height: 40px;
-      border-radius: 6px;
-      padding: 8px 12px;
-      background: var(--ink);
-      color: var(--paper);
-      text-decoration: none;
-      font-weight: 700;
-    }
-
-    .download-link[aria-disabled="true"] {
-      opacity: 0.45;
-      pointer-events: none;
-    }
-
-    pre {
-      white-space: pre-wrap;
-      word-break: break-word;
-      background: #101214;
-      color: #f2f4f6;
-      border-radius: 8px;
-      padding: 16px;
-      overflow: auto;
-      max-height: 560px;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
-      border-radius: 6px;
-      background: #f4ead0;
-      color: #4f3600;
-      padding: 4px 8px;
-      font-weight: 700;
-      font-size: 12px;
-    }
-
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fbfbfc;
-      padding: 12px;
-      margin: 12px 0 18px;
-    }
-
-    .panel.hidden { display: none; }
-
-    .direction-card {
-      border-top: 1px solid var(--line);
-      padding: 12px 0;
-    }
-
-    .direction-card:first-child { border-top: 0; }
-
-    .direction-card p { margin-bottom: 8px; }
-
-    .feedback-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    select {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      font: inherit;
-      padding: 10px 12px;
-      background: #fbfbfc;
-      color: var(--ink);
-    }
-
-    .check-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 13px;
-      margin: 6px 0 12px;
-    }
-
-    .check-row input { width: auto; }
-
-    @media (max-width: 880px) {
-      main { grid-template-columns: 1fr; }
-      .status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .topbar { align-items: flex-start; flex-direction: column; }
-    }
+    .review-status.success { color: var(--green); }
+    .review-status.error { color: #cc0000; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="topbar">
-      <div class="mark">
-        <img alt="" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=120&q=80">
+  <div class="header">
+    <div class="subtitle">StudioNow</div>
+    <div class="divider"></div>
+    <div class="tagline">Agentic Script Creator</div>
+  </div>
+
+  <div class="container">
+
+    <!-- BRIEF FORM -->
+    <div class="brief-section">
+      <h2>Write a Script</h2>
+      <p class="description">Describe your project and the agent will generate a production-ready script in StudioNow format. Attach reference files to sharpen the output. Runs take 3–8 minutes; you can leave the tab open.</p>
+
+      <!-- Project Basics -->
+      <div class="section-label">Project Basics</div>
+      <div class="form-grid">
         <div>
-          <h1>StudioNow Script Creator</h1>
-          <div class="subhead">Agent workflow prototype</div>
+          <label>Project Name</label>
+          <input type="text" id="projectName" placeholder="e.g. Sprite Summer Sizzle 2026">
+        </div>
+        <div>
+          <label>Client</label>
+          <input type="text" id="client" placeholder="The Coca-Cola Company" value="The Coca-Cola Company">
+        </div>
+        <div>
+          <label>Date</label>
+          <input type="text" id="projectDate">
+        </div>
+        <div>
+          <label>Version</label>
+          <input type="text" id="version" placeholder="1" value="1">
+        </div>
+        <div>
+          <label>Internal or External <span class="required">*</span></label>
+          <select id="audience" required>
+            <option value="" disabled selected>Select...</option>
+            <option value="Internal">Internal</option>
+            <option value="External">External</option>
+          </select>
         </div>
       </div>
-      <span class="pill">Vercel UI/API + Supabase jobs + Node worker</span>
-    </div>
-  </header>
 
-  <main>
-    <section>
-      <h2>Brief Intake</h2>
-      <p>Submit a brief. The worker turns it into staged artifacts before a final script appears.</p>
-      <form id="brief-form">
-        <label for="name">Project name</label>
-        <input id="name" name="name" value="Pulse Platform Explainer">
-
-        <div style="height: 14px"></div>
-
-        <label for="brief">Brief</label>
-        <textarea id="brief" name="brief">Client: The Coca-Cola Company
-Script Type: Explainer
-Tone: Tech-Forward
-Internal or External: Internal
-Runtime: 1:30
-
-Brief:
-Coca-Cola is rolling out 'Pulse,' a new internal marketing intelligence platform that consolidates campaign performance data, media spend tracking, and competitive benchmarking into a single dashboard. Currently, teams use three different tools and spend an average of 6 hours per week compiling reports manually. Pulse replaces all three. It has real-time dashboards, automated weekly summaries, and an AI-powered anomaly detection feature that flags underperforming campaigns before quarterly reviews. The rollout begins in Q3 2026.
-
-Audience: TCCC marketing teams across North America.
-Business Objective: Drive adoption of Pulse across marketing teams before Q3 rollout.
-Existing Assets: Pulse UI screenshots, TCCC internal brand guidelines.
-Missing Assets: Screen recordings of Pulse in action, motion graphics for data visualization demos.
-Must-Haves: Platform name by :15, three core capabilities, Q3 2026 rollout date, sign-up CTA.</textarea>
-
-        <div style="height: 14px"></div>
-
-        <label for="files">Attachments (optional)</label>
-        <input id="files" name="files" type="file" multiple accept="image/*,.pdf,application/pdf">
-        <p id="file-summary" style="margin: 6px 0 0; font-size: 12px; color: var(--muted);">Add PDFs (deck or brief) and images. PDFs are auto-split into per-page visuals. Total upload should stay under 30MB.</p>
-        <ul id="file-list" style="margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted);"></ul>
-
-        <div style="height: 14px"></div>
-
-        <div class="actions">
-          <button id="submit" type="submit">Create Job</button>
-          <button class="secondary" id="load-demo" type="button">Load Demo Job</button>
+      <!-- What Are We Making -->
+      <div class="section-label">What Are We Making?</div>
+      <div class="form-grid">
+        <div>
+          <label>Script Type <span class="required">*</span></label>
+          <select id="scriptType" required>
+            <option value="" disabled selected>Select...</option>
+            <option value="Standard Sizzle">Standard Sizzle</option>
+            <option value="Explainer">Explainer</option>
+            <option value="Case Study / Awards">Case Study / Awards</option>
+            <option value="Experiential / Consumer Journey">Experiential / Consumer Journey</option>
+            <option value="Commercial / Brand Film">Commercial / Brand Film</option>
+          </select>
         </div>
-      </form>
-    </section>
-
-    <section>
-      <h2>Workflow State</h2>
-      <p id="job-label">No job yet.</p>
-
-      <div class="status-grid" id="stages"></div>
-
-      <h3>Events</h3>
-      <div class="event-log" id="events">Waiting for a job.</div>
-
-      <div class="result">
-        <div class="panel hidden" id="direction-panel"></div>
-
-        <h3>Quality Review</h3>
-        <div class="panel" id="critique-summary">Waiting for critique.</div>
-
-        <h3>Final Script</h3>
-        <pre id="final">The final artifact will appear here when the worker completes.</pre>
-
-        <h3>Human Feedback</h3>
-        <form class="panel" id="feedback-form">
-          <div class="feedback-grid">
-            <div>
-              <label for="rating">Rating</label>
-              <select id="rating" name="rating">
-                <option value="">Not rated</option>
-                <option value="5">5 - Gold</option>
-                <option value="4">4 - Strong</option>
-                <option value="3">3 - Usable with edits</option>
-                <option value="2">2 - Weak</option>
-                <option value="1">1 - Miss</option>
-              </select>
-            </div>
-            <div>
-              <label for="verdict">Verdict</label>
-              <select id="verdict" name="verdict">
-                <option value="needs_review">Needs review</option>
-                <option value="gold_candidate">Gold candidate</option>
-                <option value="usable">Usable</option>
-                <option value="needs_work">Needs work</option>
-                <option value="miss">Miss</option>
-              </select>
-            </div>
+        <div>
+          <label>Runtime <span class="required">*</span></label>
+          <select id="runtime" required onchange="toggleCustomRuntime()">
+            <option value="" disabled selected>Select...</option>
+            <option value="15 seconds">15 seconds</option>
+            <option value="30 seconds">30 seconds</option>
+            <option value="45 seconds">45 seconds</option>
+            <option value="60 seconds">60 seconds</option>
+            <option value="90 seconds">90 seconds</option>
+            <option value="2 minutes">2 minutes</option>
+            <option value="2 minutes+">2 minutes+</option>
+            <option value="Custom">Custom</option>
+          </select>
+        </div>
+        <div id="customRuntimeWrapper" style="display:none;">
+          <label>Custom Runtime</label>
+          <input type="text" id="customRuntime" placeholder="e.g. 3:30, 4 minutes">
+        </div>
+        <div class="full-width">
+          <label>Tone <span class="required">*</span></label>
+          <div class="tone-chips" id="toneChips">
+            <button type="button" class="tone-chip" onclick="toggleTone('Tech-Forward')">Tech-Forward</button>
+            <button type="button" class="tone-chip" onclick="toggleTone('Emotion-Driven')">Emotion-Driven</button>
+            <button type="button" class="tone-chip" onclick="toggleTone('Product-Led')">Product-Led</button>
+            <button type="button" class="tone-chip" onclick="toggleTone('Brand-Led')">Brand-Led</button>
+            <button type="button" class="tone-chip" onclick="toggleTone('Commercial / Cinematic')">Commercial / Cinematic</button>
+            <button type="button" class="tone-chip" onclick="toggleTone('Human / Documentary')">Human / Documentary</button>
+            <button type="button" class="tone-chip" onclick="toggleTone('Confident / Corporate')">Confident / Corporate</button>
+            <button type="button" class="tone-chip" onclick="toggleTone('Direct / Informational')">Direct / Informational</button>
+            <button type="button" class="tone-chip" onclick="toggleTone('Energetic / Upbeat')">Energetic / Upbeat</button>
+            <button type="button" class="tone-chip" onclick="toggleTone('Inspirational')">Inspirational</button>
           </div>
-          <label for="feedback-comment">What should the agent learn?</label>
-          <textarea id="feedback-comment" name="comment" style="min-height: 92px" placeholder="Example: Strong visual motif, but the close is too generic. Make future scripts land the commercial argument harder."></textarea>
-          <label class="check-row">
-            <input id="promote-to-gold" name="promoteToGold" type="checkbox">
-            Mark as a gold candidate after human edits
-          </label>
-          <button id="feedback-submit" type="submit">Save Feedback</button>
-          <p id="feedback-status" style="margin-top: 10px"></p>
-        </form>
-
-        <form class="panel" id="gold-form" style="margin-top: 18px; background: #fff8e1; border: 1px solid #e6c97f;">
-          <h3 style="margin: 0 0 4px; font-size: 15px; color: var(--gold);">Promote to Gold</h3>
-          <p style="margin: 0 0 12px; font-size: 12px; color: var(--muted);">
-            Submit the final human-edited script with the original brief.
-            Once Mike approves, this pair becomes a gold example the agent learns from.
-          </p>
-
-          <label for="gold-final-file">Final edited script (DOCX, TXT, or MD)</label>
-          <input id="gold-final-file" name="finalFile" type="file" accept=".txt,.md,.markdown,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown">
-
-          <div style="height: 10px"></div>
-
-          <label for="gold-final-text">Or paste the final edited script here</label>
-          <textarea id="gold-final-text" name="finalText" style="min-height: 120px" placeholder="Paste the final, client-ready script — the one a human polished after seeing the agent draft."></textarea>
-
-          <div style="height: 10px"></div>
-
-          <label for="gold-why">Why is this gold?</label>
-          <textarea id="gold-why" name="whyGold" style="min-height: 60px" placeholder="Example: Specific motif, honest runtime, no generic filler, producer notes were accurate."></textarea>
-
-          <label for="gold-changed">What did you change from the agent draft?</label>
-          <textarea id="gold-changed" name="whatChanged" style="min-height: 60px" placeholder="Example: Tightened the open, swapped asset-3 for new footage, rewrote the close to land the CTA."></textarea>
-
-          <label for="gold-reviewer">Reviewer (your name)</label>
-          <input id="gold-reviewer" name="reviewerName" type="text" placeholder="Your name">
-
-          <button id="gold-submit" type="submit" style="background: var(--gold);">Submit Gold Candidate</button>
-          <p id="gold-status" style="margin-top: 10px"></p>
-        </form>
+          <div class="tone-hint" id="toneHint">Select up to 2</div>
+        </div>
+        <div class="full-width">
+          <label>Audio <span class="required">*</span></label>
+          <div class="audio-toggle">
+            <button type="button" class="audio-btn" id="audioVO" onclick="setAudio('Voice Over with Supers')">Voice Over with Supers</button>
+            <button type="button" class="audio-btn" id="audioTOS" onclick="setAudio('Text On Screen')">Text On Screen</button>
+          </div>
+        </div>
       </div>
-    </section>
-  </main>
+
+      <!-- Brief & Details -->
+      <div class="section-label">Brief & Details</div>
+      <div class="form-grid">
+        <div class="full-width">
+          <label>Brief <span class="required">*</span></label>
+          <div class="brief-mode-toggle">
+            <button type="button" class="brief-mode-btn active" id="briefModeText" onclick="setBriefMode('text')">Type</button>
+            <button type="button" class="brief-mode-btn" id="briefModeFile" onclick="setBriefMode('file')">Upload File</button>
+          </div>
+          <div id="briefTextWrap">
+            <textarea id="brief" placeholder="Describe the project. What's the story? Who's the audience? What do we need to communicate? The more detail the better, but even a sentence works."></textarea>
+          </div>
+          <div id="briefFileWrap" style="display:none;">
+            <div class="brief-upload-zone" id="briefUploadZone">
+              <div class="upload-prompt">
+                <div class="upload-icon">+</div>
+                <div>Drop brief file here or <strong>browse</strong></div>
+                <div class="upload-hint">PDF, Word doc, or text. One file.</div>
+              </div>
+              <input type="file" id="briefFileInput" accept=".pdf,.doc,.docx,.txt" hidden>
+            </div>
+            <div id="briefFileChip" class="file-list"></div>
+          </div>
+        </div>
+        <div class="full-width">
+          <label>Key Message / Tagline (optional)</label>
+          <input type="text" id="tagline" placeholder="The closing line or core message">
+        </div>
+        <div class="full-width">
+          <label>Reference Files (optional)</label>
+          <div class="upload-zone" id="uploadZone">
+            <div class="upload-prompt">
+              <div class="upload-icon">+</div>
+              <div>Drop files here or <strong>browse</strong></div>
+              <div class="upload-hint">PDFs, Word docs, images. Up to 25 MB total. PDFs are auto-split into per-page visuals.</div>
+            </div>
+            <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp" hidden>
+          </div>
+          <div class="file-list" id="fileList"></div>
+          <div class="file-total" id="fileTotal"></div>
+        </div>
+      </div>
+
+      <div class="error" id="error"></div>
+
+      <button class="btn-generate" id="generateBtn" onclick="generate()">Generate Script</button>
+
+      <div class="examples">
+        <p>Try an example</p>
+        <div class="example-chips">
+          <div class="example-chip" onclick="loadExample('sizzle')">:60 food sizzle reel</div>
+          <div class="example-chip" onclick="loadExample('explainer')">Platform explainer</div>
+          <div class="example-chip" onclick="loadExample('award')">Award submission</div>
+          <div class="example-chip" onclick="loadExample('event')">Event opener</div>
+          <div class="example-chip" onclick="loadExample('spec')">:30 spec commercial</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-section" id="progressSection">
+      <div class="progress-header">
+        <h3 id="jobLabel">Job</h3>
+        <div class="progress-status" id="progressStatus">Queued...</div>
+      </div>
+      <div class="stages" id="stages"></div>
+      <div class="events" id="events">No events yet.</div>
+    </div>
+
+    <!-- DIRECTION PICKER -->
+    <div class="direction-panel hidden" id="directionPanel"></div>
+
+    <!-- SCRIPT OUTPUT -->
+    <div class="output-section" id="scriptOutput">
+      <div class="output-header">
+        <h3>Client Script</h3>
+        <div class="output-actions">
+          <a id="scriptDocx" href="#" aria-disabled="true">⬇ Download .docx</a>
+        </div>
+      </div>
+      <div class="script-content" id="scriptContent"></div>
+    </div>
+
+    <!-- PRODUCER NOTES OUTPUT -->
+    <div class="output-section" id="notesOutput">
+      <div class="output-header">
+        <h3>Producer Notes</h3>
+        <div class="output-actions">
+          <a id="notesDocx" href="#" aria-disabled="true">⬇ Download .docx</a>
+        </div>
+      </div>
+      <div class="script-content" id="notesContent"></div>
+    </div>
+
+    <!-- FEEDBACK -->
+    <div class="review-section" id="feedbackSection" style="display:none;">
+      <h3>Feedback</h3>
+      <p class="description">Help the agent learn. Be specific — tone, structure, missing info, anything that would change how you'd brief this next time.</p>
+      <form id="feedbackForm">
+        <div class="review-grid">
+          <div>
+            <label>Rating (1–5)</label>
+            <select name="rating">
+              <option value="">No rating</option>
+              <option value="1">1 — Not usable</option>
+              <option value="2">2 — Major rewrite</option>
+              <option value="3">3 — Workable</option>
+              <option value="4">4 — Strong draft</option>
+              <option value="5">5 — Gold candidate</option>
+            </select>
+          </div>
+          <div>
+            <label>Verdict</label>
+            <select name="verdict">
+              <option value="needs_review">Needs review</option>
+              <option value="usable">Usable</option>
+              <option value="needs_work">Needs work</option>
+              <option value="miss">Off-brief</option>
+              <option value="gold_candidate">Gold candidate</option>
+            </select>
+          </div>
+          <div class="full-width">
+            <label>What should the agent learn?</label>
+            <textarea name="comment" placeholder="Example: Strong visual motif, but the close is too generic. Make future scripts land the commercial argument harder."></textarea>
+          </div>
+        </div>
+        <button class="btn-feedback" id="feedbackSubmit" type="submit">Save Feedback</button>
+        <span class="review-status" id="feedbackStatus"></span>
+      </form>
+    </div>
+
+    <!-- GOLD PROMOTION -->
+    <div class="review-section gold" id="goldSection" style="display:none;">
+      <h3>Promote to Gold</h3>
+      <p class="description">Submit the final human-edited script with the original brief. Once Mike approves, this pair becomes a gold example the agent learns from.</p>
+      <form id="goldForm">
+        <div class="review-grid">
+          <div class="full-width">
+            <label>Final edited script (DOCX, TXT, or MD)</label>
+            <input id="goldFinalFile" type="file" accept=".txt,.md,.markdown,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown">
+          </div>
+          <div class="full-width">
+            <label>Or paste the final edited script</label>
+            <textarea id="goldFinalText" placeholder="Paste the final, client-ready script."></textarea>
+          </div>
+          <div class="full-width">
+            <label>Why is this gold?</label>
+            <textarea name="whyGold" placeholder="Specific motif, honest runtime, no generic filler..."></textarea>
+          </div>
+          <div class="full-width">
+            <label>What did you change from the agent draft?</label>
+            <textarea name="whatChanged" placeholder="Tightened the open, swapped asset-3 for new footage, rewrote the close..."></textarea>
+          </div>
+          <div>
+            <label>Reviewer name</label>
+            <input type="text" name="reviewerName" placeholder="Your name">
+          </div>
+        </div>
+        <button class="btn-feedback gold" id="goldSubmit" type="submit">Submit Gold Candidate</button>
+        <span class="review-status" id="goldStatus"></span>
+      </form>
+    </div>
+
+  </div>
 
   <script>
+    // ==================== STATE ====================
+    const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
+    const IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]);
     const stageLabels = [
       ["diagnosis", "Diagnose"],
       ["source_mining", "Mine"],
+      ["visual_intake", "Visuals"],
       ["strategy", "Strategize"],
       ["blueprint", "Blueprint"],
       ["draft", "Draft"],
@@ -457,370 +737,623 @@ Must-Haves: Platform name by :15, three core capabilities, Q3 2026 rollout date,
       ["critique", "Critique"],
       ["final", "Final"]
     ];
+    const EXAMPLES = {
+      sizzle: {
+        projectName: "Coca-Cola x Local Food Sizzle",
+        scriptType: "Standard Sizzle",
+        runtime: "60 seconds",
+        audience: "Internal",
+        tones: ["Energetic / Upbeat", "Human / Documentary"],
+        audio: "Voice Over with Supers",
+        brief: "A 60-second sizzle about how Coke pairs with local food. Needs to be adaptable from Nashville to Chicago to Atlanta. Each city version should feature 3-4 local restaurants. The master is a template — locked VO spine, variable city shots and restaurant names. This will be used at retail partner meetings to show how Coke activates locally. Should feel warm, appetizing, real — not corporate."
+      },
+      explainer: {
+        projectName: "Pulse Platform Explainer",
+        scriptType: "Explainer",
+        runtime: "90 seconds",
+        audience: "Internal",
+        tones: ["Tech-Forward", "Direct / Informational"],
+        audio: "Voice Over with Supers",
+        brief: "Introduce a new internal analytics dashboard called Pulse that gives brand managers real-time sales data across all channels. It replaces three legacy tools and gives 150+ metrics in one view. Currently rolling out to 50 markets. The old tools required manual CSV exports and took 3 days to get a cross-channel view. Pulse does it in seconds. Audience is cross-functional brand teams who are skeptical of yet another tool."
+      },
+      award: {
+        projectName: "Summer of Sprite Award Submission",
+        scriptType: "Case Study / Awards",
+        runtime: "2 minutes",
+        audience: "External",
+        tones: ["Confident / Corporate", "Inspirational"],
+        audio: "Voice Over with Supers",
+        brief: "Summer of Sprite campaign case study for NMA submission. Biggest summer campaign in brand history. Partnered with major music festivals across 12 cities, launched limited-edition packaging with 4 regional designs, drove +18% volume growth vs YA. Culturally resonant social campaign with 2B impressions. Gen Z audience. Budget was 40% lower than previous summer campaign. Need to tell the story of how a scrappy, culture-first approach outperformed big-budget precedent."
+      },
+      event: {
+        projectName: "StudioNow Creative Summit Opener",
+        scriptType: "Experiential / Consumer Journey",
+        runtime: "90 seconds",
+        audience: "Internal",
+        tones: ["Inspirational", "Commercial / Cinematic"],
+        audio: "Text On Screen",
+        brief: "Opening video for the 2026 StudioNow Creative Summit in Nashville. 200 attendees — internal team plus key client partners. Theme: 'The Next Frame.' Celebrating innovation in AI-powered production while honoring craft. Should build anticipation and energy. Plays in a dark ballroom before the CEO takes the stage. No VO — music and supers only. Nashville location matters."
+      },
+      spec: {
+        projectName: "Mr. Pibb :30 Spec",
+        scriptType: "Commercial / Brand Film",
+        runtime: "30 seconds",
+        audience: "External",
+        tones: ["Commercial / Cinematic", "Brand-Led"],
+        audio: "Text On Screen",
+        brief: "A :30 brand film for Mr. Pibb. Position the soda as confident, unpretentious, and joyful. Dry, deadpan comedy. Cinematic seriousness applied to absurdly simple moments. No dialogue — visual storytelling with SFX. The humor comes from treating mundane moments with the gravity of a prestige film. Tagline: Mr. Pibb is Built Different."
+      }
+    };
 
+    let selectedTones = [];
+    let selectedAudio = null;
+    let briefMode = "text";
+    let briefFile = null;
+    let uploadedFiles = [];
     let activeJobId = null;
     let pollTimer = null;
 
-    const form = document.querySelector("#brief-form");
-    const submit = document.querySelector("#submit");
-    const loadDemo = document.querySelector("#load-demo");
-    const jobLabel = document.querySelector("#job-label");
-    const eventsEl = document.querySelector("#events");
-    const finalEl = document.querySelector("#final");
-    const stagesEl = document.querySelector("#stages");
-    const directionPanel = document.querySelector("#direction-panel");
-    const critiqueSummary = document.querySelector("#critique-summary");
-    const feedbackForm = document.querySelector("#feedback-form");
-    const feedbackSubmit = document.querySelector("#feedback-submit");
-    const feedbackStatus = document.querySelector("#feedback-status");
+    // ==================== INIT ====================
+    document.getElementById("projectDate").value = formatToday();
+    function formatToday() {
+      const d = new Date();
+      return `${d.getMonth() + 1}/${d.getDate()}/${String(d.getFullYear()).slice(-2)}`;
+    }
 
-    const downloads = document.createElement("div");
-    downloads.className = "download-row";
-    downloads.innerHTML = `
-      <a id="script-docx" class="download-link" aria-disabled="true">Download Script .docx</a>
-      <a id="notes-docx" class="download-link" aria-disabled="true">Download Producer Notes .docx</a>
-    `;
-    document.querySelector(".result").insertBefore(downloads, finalEl);
-
-    const scriptDocxLink = document.querySelector("#script-docx");
-    const notesDocxLink = document.querySelector("#notes-docx");
-
-    renderStages();
-
-    const filesInput = document.querySelector("#files");
-    const fileListEl = document.querySelector("#file-list");
-    const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
-    filesInput.addEventListener("change", () => {
-      const files = Array.from(filesInput.files || []);
-      const total = files.reduce((sum, file) => sum + file.size, 0);
-      const items = files.map((file) => {
-        const kb = Math.round(file.size / 1024);
-        const sizeText = kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
-        return `<li>${escapeHtml(file.name)} <span style="color:#9aa1a8;">(${sizeText})</span></li>`;
-      });
-      if (total > MAX_TOTAL_BYTES) {
-        items.push(`<li style="color: var(--red); list-style: none; margin-left: -18px; margin-top: 4px;">⚠ Total upload is ${(total / (1024 * 1024)).toFixed(1)} MB. Limit is 25 MB. Submit will fail — remove a file or export your PDF at lower resolution.</li>`);
+    // ==================== FORM HELPERS ====================
+    function toggleTone(tone) {
+      const i = selectedTones.indexOf(tone);
+      if (i >= 0) {
+        selectedTones.splice(i, 1);
+      } else {
+        if (selectedTones.length >= 2) selectedTones.shift();
+        selectedTones.push(tone);
       }
-      fileListEl.innerHTML = items.join("") || "";
+      renderToneChips();
+    }
+    function renderToneChips() {
+      document.querySelectorAll(".tone-chip").forEach((chip) => {
+        chip.classList.toggle("selected", selectedTones.includes(chip.textContent.trim()));
+      });
+    }
+    function setAudio(value) {
+      selectedAudio = value;
+      document.getElementById("audioVO").classList.toggle("selected", value === "Voice Over with Supers");
+      document.getElementById("audioTOS").classList.toggle("selected", value === "Text On Screen");
+    }
+    function setBriefMode(mode) {
+      briefMode = mode;
+      document.getElementById("briefModeText").classList.toggle("active", mode === "text");
+      document.getElementById("briefModeFile").classList.toggle("active", mode === "file");
+      document.getElementById("briefTextWrap").style.display = mode === "text" ? "" : "none";
+      document.getElementById("briefFileWrap").style.display = mode === "file" ? "" : "none";
+    }
+    function toggleCustomRuntime() {
+      const sel = document.getElementById("runtime").value;
+      document.getElementById("customRuntimeWrapper").style.display = sel === "Custom" ? "" : "none";
+    }
+
+    function loadExample(key) {
+      const ex = EXAMPLES[key];
+      if (!ex) return;
+      document.getElementById("projectName").value = ex.projectName;
+      document.getElementById("scriptType").value = ex.scriptType;
+      document.getElementById("runtime").value = ex.runtime;
+      document.getElementById("audience").value = ex.audience;
+      selectedTones = [...ex.tones];
+      renderToneChips();
+      setAudio(ex.audio);
+      setBriefMode("text");
+      document.getElementById("brief").value = ex.brief;
+      toggleCustomRuntime();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // ==================== FILE UPLOAD ====================
+    function fileIcon(name) {
+      const ext = (name.split(".").pop() || "").toLowerCase();
+      if (ext === "pdf") return { cls: "pdf", label: "PDF" };
+      if (["doc", "docx"].includes(ext)) return { cls: "doc", label: "DOC" };
+      if (["ppt", "pptx"].includes(ext)) return { cls: "ppt", label: "PPT" };
+      if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return { cls: "img", label: "IMG" };
+      return { cls: "doc", label: "FILE" };
+    }
+    function formatBytes(n) {
+      if (n > 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + " MB";
+      return Math.round(n / 1024) + " KB";
+    }
+    function renderFileList() {
+      const el = document.getElementById("fileList");
+      if (uploadedFiles.length === 0) { el.innerHTML = ""; document.getElementById("fileTotal").textContent = ""; return; }
+      el.innerHTML = uploadedFiles.map((f, i) => {
+        const ic = fileIcon(f.name);
+        return `<div class="file-chip">
+          <span class="file-icon ${ic.cls}">${ic.label}</span>
+          <span class="file-name">${escapeHtml(f.name)}</span>
+          <span class="file-size">${formatBytes(f.size)}</span>
+          <span class="file-remove" onclick="removeFile(${i})">×</span>
+        </div>`;
+      }).join("");
+      const total = uploadedFiles.reduce((s, f) => s + f.size, 0);
+      const totalEl = document.getElementById("fileTotal");
+      totalEl.textContent = `${formatBytes(total)} of ${formatBytes(MAX_TOTAL_BYTES)} used`;
+      totalEl.classList.toggle("over-limit", total > MAX_TOTAL_BYTES);
+    }
+    window.removeFile = function (i) {
+      uploadedFiles.splice(i, 1);
+      renderFileList();
+    };
+
+    function renderBriefFileChip() {
+      const el = document.getElementById("briefFileChip");
+      if (!briefFile) { el.innerHTML = ""; return; }
+      const ic = fileIcon(briefFile.name);
+      el.innerHTML = `<div class="file-chip">
+        <span class="file-icon ${ic.cls}">${ic.label}</span>
+        <span class="file-name">${escapeHtml(briefFile.name)}</span>
+        <span class="file-size">${formatBytes(briefFile.size)}</span>
+        <span class="file-remove" onclick="clearBriefFile()">×</span>
+      </div>`;
+    }
+    window.clearBriefFile = function () { briefFile = null; renderBriefFileChip(); };
+
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
+        reader.onerror = () => reject(reader.error || new Error("File read failed"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function setupUploadZone(zoneId, inputId, onFiles) {
+      const zone = document.getElementById(zoneId);
+      const input = document.getElementById(inputId);
+      zone.addEventListener("click", () => input.click());
+      zone.addEventListener("dragover", (e) => { e.preventDefault(); zone.classList.add("dragover"); });
+      zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+      zone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        zone.classList.remove("dragover");
+        onFiles(Array.from(e.dataTransfer.files || []));
+      });
+      input.addEventListener("change", () => {
+        onFiles(Array.from(input.files || []));
+        input.value = "";
+      });
+    }
+    setupUploadZone("uploadZone", "fileInput", async (files) => {
+      for (const file of files) {
+        uploadedFiles.push(file);
+      }
+      renderFileList();
+    });
+    setupUploadZone("briefUploadZone", "briefFileInput", (files) => {
+      briefFile = files[0] || null;
+      renderBriefFileChip();
     });
 
-    async function readFilesAsAttachments(fileList) {
-      const out = [];
-      for (const file of fileList) {
-        const base64 = await new Promise((resolveRead, rejectRead) => {
-          const reader = new FileReader();
-          reader.onload = () => resolveRead(String(reader.result || "").split(",")[1] || "");
-          reader.onerror = () => rejectRead(reader.error || new Error("File read failed"));
-          reader.readAsDataURL(file);
+    // ==================== ERROR DISPLAY ====================
+    function showError(msg) {
+      const el = document.getElementById("error");
+      el.textContent = msg;
+      el.classList.add("active");
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    function hideError() {
+      document.getElementById("error").classList.remove("active");
+    }
+
+    // ==================== GENERATE ====================
+    async function generate() {
+      hideError();
+      const projectName = document.getElementById("projectName").value.trim();
+      const client = document.getElementById("client").value.trim();
+      const projectDate = document.getElementById("projectDate").value.trim();
+      const version = document.getElementById("version").value.trim();
+      const audience = document.getElementById("audience").value;
+      const scriptType = document.getElementById("scriptType").value;
+      const runtimeSel = document.getElementById("runtime").value;
+      const customRuntime = document.getElementById("customRuntime").value.trim();
+      const runtime = runtimeSel === "Custom" ? customRuntime : runtimeSel;
+      const tagline = document.getElementById("tagline").value.trim();
+      const briefText = document.getElementById("brief").value.trim();
+
+      if (!audience) return showError("Please select Internal or External.");
+      if (!scriptType) return showError("Please select a Script Type.");
+      if (!runtime) return showError("Please select a Runtime.");
+      if (selectedTones.length === 0) return showError("Please select at least one Tone.");
+      if (!selectedAudio) return showError("Please select an Audio option.");
+      if (briefMode === "text" && !briefText) return showError("Please enter a brief.");
+      if (briefMode === "file" && !briefFile) return showError("Please upload a brief file.");
+
+      const totalBytes = uploadedFiles.reduce((s, f) => s + f.size, 0) + (briefFile?.size || 0);
+      if (totalBytes > MAX_TOTAL_BYTES) {
+        return showError(`Attachments exceed the ${formatBytes(MAX_TOTAL_BYTES)} limit. Remove some files.`);
+      }
+
+      let fullBrief = "";
+      if (projectName) fullBrief += `Project Name: ${projectName}\n`;
+      if (client) fullBrief += `Client: ${client}\n`;
+      if (projectDate) fullBrief += `Date: ${projectDate}\n`;
+      if (version) fullBrief += `Version: ${version}\n`;
+      fullBrief += `Internal/External: ${audience}\n`;
+      fullBrief += `Script Type: ${scriptType}\n`;
+      fullBrief += `Tone: ${selectedTones.join(" + ")}\n`;
+      fullBrief += `Audio: ${selectedAudio}\n`;
+      fullBrief += `Runtime: ${runtime}\n`;
+      if (tagline) fullBrief += `Key Message / Tagline: ${tagline}\n`;
+      if (briefMode === "file") {
+        fullBrief += `\nBrief: The full project brief is in the attached document. Extract all relevant details from it.`;
+      } else {
+        fullBrief += `\nBrief:\n${briefText}`;
+      }
+
+      const attachments = [];
+      if (briefMode === "file" && briefFile) {
+        const base64 = await readFileAsBase64(briefFile);
+        attachments.push({
+          filename: `Brief: ${briefFile.name}`,
+          source: `Brief: ${briefFile.name}`,
+          mediaType: briefFile.type || guessMediaType(briefFile.name),
+          base64
         });
-        out.push({
+      }
+      for (const file of uploadedFiles) {
+        const base64 = await readFileAsBase64(file);
+        attachments.push({
           filename: file.name,
           source: file.name,
           mediaType: file.type || guessMediaType(file.name),
           base64
         });
       }
-      return out;
-    }
 
-    function guessMediaType(name) {
-      const ext = name.split(".").pop().toLowerCase();
-      const map = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", pdf: "application/pdf" };
-      return map[ext] || "application/octet-stream";
-    }
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      submit.disabled = true;
-      finalEl.textContent = "Reading attachments...";
-
+      const btn = document.getElementById("generateBtn");
+      btn.disabled = true;
+      btn.textContent = "Submitting...";
       try {
-        const attachments = await readFilesAsAttachments(filesInput.files || []);
-        finalEl.textContent = "Creating job...";
         const response = await fetch("/api/jobs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: form.name.value,
-            brief: form.brief.value,
+            name: projectName || `${scriptType} — ${runtime}`,
+            brief: fullBrief,
             attachments
           })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Job creation failed");
-        watchJob(data.job.id);
-      } catch (error) {
-        finalEl.textContent = error.message;
+        startWatching(data.job.id);
+      } catch (err) {
+        showError(err.message);
       } finally {
-        submit.disabled = false;
+        btn.disabled = false;
+        btn.textContent = "Generate Script";
       }
-    });
+    }
+    function guessMediaType(name) {
+      const ext = (name.split(".").pop() || "").toLowerCase();
+      const map = {
+        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp",
+        pdf: "application/pdf",
+        doc: "application/msword",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        txt: "text/plain"
+      };
+      return map[ext] || "application/octet-stream";
+    }
 
-    loadDemo.addEventListener("click", () => {
-      const id = prompt("Paste a Supabase script_jobs id");
-      if (id) watchJob(id.trim());
-    });
-
-    function watchJob(id) {
-      activeJobId = id;
-      jobLabel.textContent = `Job ${id}`;
+    // ==================== JOB POLLING ====================
+    function startWatching(jobId) {
+      activeJobId = jobId;
+      document.getElementById("jobLabel").textContent = `Job ${jobId.slice(0, 8)}…`;
+      document.getElementById("progressSection").classList.add("active");
+      document.getElementById("progressSection").scrollIntoView({ behavior: "smooth", block: "start" });
+      renderStages();
       if (pollTimer) clearInterval(pollTimer);
       poll();
-      pollTimer = setInterval(poll, 2500);
+      pollTimer = setInterval(poll, 3000);
     }
 
     async function poll() {
       if (!activeJobId) return;
-      const response = await fetch(`/api/jobs/status?id=${encodeURIComponent(activeJobId)}`);
-      const data = await response.json();
-      if (!response.ok) {
-        eventsEl.textContent = data.error || "Could not load job.";
-        return;
-      }
-
-      renderStages(data.job.current_stage, data.job.status);
-      renderEvents(data.events);
-      renderDirections(data.job, data.artifacts);
-      renderCritique(data.artifacts);
-      renderFinal(data.artifacts);
-      renderDownloads(data.artifacts);
-
-      if (["complete", "failed", "canceled", "waiting_for_direction"].includes(data.job.status)) {
-        clearInterval(pollTimer);
-      }
-    }
-
-    const goldForm = document.querySelector("#gold-form");
-    const goldSubmit = document.querySelector("#gold-submit");
-    const goldStatus = document.querySelector("#gold-status");
-    const goldFileInput = document.querySelector("#gold-final-file");
-    const goldTextInput = document.querySelector("#gold-final-text");
-
-    async function readFinalScriptFile(file) {
-      if (!file) return null;
-      const ext = file.name.split(".").pop().toLowerCase();
-      const isText = ext === "txt" || ext === "md" || ext === "markdown" || (file.type || "").startsWith("text/");
-      if (isText) {
-        const text = await file.text();
-        return { text, filename: file.name, mediaType: file.type || "text/plain" };
-      }
-      const base64 = await new Promise((resolveRead, rejectRead) => {
-        const reader = new FileReader();
-        reader.onload = () => resolveRead(String(reader.result || "").split(",")[1] || "");
-        reader.onerror = () => rejectRead(reader.error || new Error("File read failed"));
-        reader.readAsDataURL(file);
-      });
-      return {
-        base64,
-        filename: file.name,
-        mediaType: file.type || "application/octet-stream"
-      };
-    }
-
-    goldForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      if (!activeJobId) {
-        goldStatus.textContent = "Load a job before submitting a gold candidate.";
-        return;
-      }
-
-      goldSubmit.disabled = true;
-      goldStatus.textContent = "Reading final script...";
-
       try {
-        const fileMeta = await readFinalScriptFile(goldFileInput.files?.[0]);
-        const pastedText = (goldTextInput.value || "").trim();
-        if (!fileMeta && !pastedText) {
-          throw new Error("Attach a file OR paste the final edited script.");
+        const response = await fetch(`/api/jobs/status?id=${encodeURIComponent(activeJobId)}`);
+        const data = await response.json();
+        if (!response.ok) {
+          document.getElementById("progressStatus").textContent = data.error || "Could not load job.";
+          return;
         }
-
-        const finalScript = fileMeta
-          ? { ...fileMeta, text: fileMeta.text || pastedText }
-          : { text: pastedText };
-
-        goldStatus.textContent = "Submitting...";
-        const response = await fetch("/api/jobs/gold-candidate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jobId: activeJobId,
-            finalScript,
-            whyGold: goldForm.whyGold.value,
-            whatChanged: goldForm.whatChanged.value,
-            reviewerName: goldForm.reviewerName.value
-          })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Gold candidate submission failed");
-        goldStatus.textContent = "Submitted. Mike will review the pair before it becomes a gold example.";
-        goldForm.reset();
-      } catch (error) {
-        goldStatus.textContent = error.message;
-      } finally {
-        goldSubmit.disabled = false;
+        const status = data.job.status;
+        document.getElementById("progressStatus").textContent = friendlyStatus(status, data.job.current_stage);
+        renderStages(data.job.current_stage, status);
+        renderEvents(data.events);
+        renderDirections(data.job, data.artifacts);
+        renderFinal(data.artifacts);
+        renderDownloads(data.artifacts);
+        showReviewSections(status);
+        if (["complete", "failed", "canceled", "waiting_for_direction"].includes(status)) {
+          clearInterval(pollTimer);
+        }
+      } catch (err) {
+        console.error(err);
       }
-    });
-
-    feedbackForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      if (!activeJobId) {
-        feedbackStatus.textContent = "Load a job before saving feedback.";
-        return;
-      }
-
-      feedbackSubmit.disabled = true;
-      feedbackStatus.textContent = "Saving feedback...";
-
-      try {
-        const response = await fetch("/api/jobs/feedback", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jobId: activeJobId,
-            rating: feedbackForm.rating.value,
-            verdict: feedbackForm.verdict.value,
-            comment: feedbackForm.comment.value,
-            promoteToGold: feedbackForm.promoteToGold.checked
-          })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Feedback save failed");
-        feedbackStatus.textContent = "Feedback saved.";
-        poll();
-      } catch (error) {
-        feedbackStatus.textContent = error.message;
-      } finally {
-        feedbackSubmit.disabled = false;
-      }
-    });
+    }
+    function friendlyStatus(status, stage) {
+      if (status === "queued") return "Queued — waiting for worker";
+      if (status === "claimed") return "Worker picked it up";
+      if (status === "running") return `Running: ${stage}`;
+      if (status === "waiting_for_direction") return "Waiting for you to pick a direction";
+      if (status === "complete") return "Complete";
+      if (status === "failed") return "Failed";
+      if (status === "canceled") return "Canceled";
+      return status;
+    }
 
     function renderStages(current = "", status = "") {
-      stagesEl.innerHTML = "";
-      for (const [key, label] of stageLabels) {
-        const div = document.createElement("div");
-        div.className = "stage";
-        if (current === key) div.classList.add("active");
-        if (status === "complete") div.classList.add("done");
-        div.innerHTML = `<strong>${label}</strong><small>${key}</small>`;
-        stagesEl.appendChild(div);
-      }
+      const el = document.getElementById("stages");
+      const currentIdx = stageLabels.findIndex(([k]) => k === current);
+      el.innerHTML = stageLabels.map(([key, label], idx) => {
+        let cls = "stage";
+        if (currentIdx >= 0 && idx < currentIdx) cls += " done";
+        if (current === key) cls += " active";
+        if (status === "complete" && (current === "final" || idx === stageLabels.length - 1)) cls += " done";
+        return `<div class="${cls}"><strong>${label}</strong><small>${key}</small></div>`;
+      }).join("");
     }
 
     function renderEvents(events) {
-      if (!events?.length) {
-        eventsEl.textContent = "No events yet.";
-        return;
-      }
-      eventsEl.innerHTML = events.map((event) =>
-        `<div class="event"><strong>${escapeHtml(event.stage)}</strong><br>${escapeHtml(event.message)}</div>`
+      const el = document.getElementById("events");
+      if (!events?.length) { el.textContent = "No events yet."; return; }
+      el.innerHTML = events.slice(-20).map((event) =>
+        `<div class="event"><strong>[${escapeHtml(event.stage)}]</strong> ${escapeHtml(event.message)}</div>`
       ).join("");
-      eventsEl.scrollTop = eventsEl.scrollHeight;
+      el.scrollTop = el.scrollHeight;
     }
 
     function renderDirections(job, artifacts) {
+      const panel = document.getElementById("directionPanel");
       const strategy = latestArtifact(artifacts, "strategy");
       const directions = strategy?.content?.directions || [];
       if (job?.status !== "waiting_for_direction" || directions.length === 0) {
-        directionPanel.classList.add("hidden");
-        directionPanel.innerHTML = "";
+        panel.classList.add("hidden");
+        panel.innerHTML = "";
         return;
       }
-
-      directionPanel.classList.remove("hidden");
-      directionPanel.innerHTML = `
-        <h3>Choose Direction</h3>
-        <p>The strategist found multiple valid ways in. Pick one and the worker will continue.</p>
-        ${directions.map((direction) => `
+      panel.classList.remove("hidden");
+      panel.innerHTML = `
+        <h3>Choose a Direction</h3>
+        <p>The strategist found multiple ways in. Pick one and the worker will continue.</p>
+        ${directions.map((d) => `
           <div class="direction-card">
-            <strong>${escapeHtml(direction.name)}</strong>
-            <p>${escapeHtml(direction.whatMakesItWork || direction.coreEngine || "")}</p>
-            <button type="button" data-direction-id="${escapeHtml(direction.id)}">Use This Direction</button>
+            <strong>${escapeHtml(d.name || "")}</strong>
+            <p><em>Engine:</em> ${escapeHtml(d.coreEngine || "")}<br>${escapeHtml(d.whatMakesItWork || "")}</p>
+            <button type="button" data-direction-id="${escapeHtml(d.id)}">Use This Direction</button>
           </div>
-        `).join("")}
-      `;
-
-      directionPanel.querySelectorAll("button[data-direction-id]").forEach((button) => {
-        button.addEventListener("click", async () => {
-          button.disabled = true;
-          const directionId = button.getAttribute("data-direction-id");
-          const response = await fetch("/api/jobs/select-direction", {
+        `).join("")}`;
+      panel.querySelectorAll("button[data-direction-id]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          btn.textContent = "Submitting...";
+          const directionId = btn.getAttribute("data-direction-id");
+          const res = await fetch("/api/jobs/select-direction", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ jobId: activeJobId, directionId })
           });
-          const data = await response.json();
-          if (!response.ok) {
-            button.disabled = false;
-            eventsEl.textContent = data.error || "Could not select direction.";
+          if (!res.ok) {
+            btn.disabled = false;
+            btn.textContent = "Use This Direction";
             return;
           }
-          watchJob(activeJobId);
+          startWatching(activeJobId);
         });
       });
     }
 
-    function renderCritique(artifacts) {
-      const critique = latestArtifact(artifacts, "critique")?.content;
-      if (!critique) {
-        critiqueSummary.textContent = "Waiting for critique.";
-        return;
-      }
-
-      const findings = (critique.findings || []).slice(0, 3).map((finding) => {
-        if (typeof finding === "string") return finding;
-        return finding.issue || finding.fix || JSON.stringify(finding);
-      });
-
-      critiqueSummary.innerHTML = `
-        <strong>Score:</strong> ${escapeHtml(critique.score ?? "Not scored")}
-        <br><strong>Passed:</strong> ${critique.passes ? "Yes" : "No"}
-        ${findings.length ? `<ul>${findings.map((finding) => `<li>${escapeHtml(finding)}</li>`).join("")}</ul>` : ""}
-      `;
-    }
-
     function renderFinal(artifacts) {
-      const final = artifacts?.find((artifact) => artifact.type === "client_script")
-        || artifacts?.find((artifact) => artifact.type === "final_script");
-      if (final?.markdown) {
-        finalEl.textContent = final.markdown;
-      } else {
-        finalEl.textContent = "Waiting for final script.";
+      const script = artifacts?.find((a) => a.type === "client_script")
+        || artifacts?.find((a) => a.type === "final_script");
+      const notes = artifacts?.find((a) => a.type === "producer_notes");
+      const scriptOutput = document.getElementById("scriptOutput");
+      const notesOutput = document.getElementById("notesOutput");
+      if (script?.markdown) {
+        scriptOutput.classList.add("active");
+        document.getElementById("scriptContent").innerHTML = renderMarkdown(script.markdown);
+      }
+      if (notes?.markdown) {
+        notesOutput.classList.add("active");
+        document.getElementById("notesContent").innerHTML = renderMarkdown(notes.markdown);
       }
     }
 
     function renderDownloads(artifacts) {
-      const hasScript = artifacts?.some((artifact) => artifact.type === "client_script" || artifact.type === "final_script");
-      const hasNotes = artifacts?.some((artifact) => artifact.type === "producer_notes");
-
+      const hasScript = artifacts?.some((a) => a.type === "client_script" || a.type === "final_script");
+      const hasNotes = artifacts?.some((a) => a.type === "producer_notes");
+      const scriptLink = document.getElementById("scriptDocx");
+      const notesLink = document.getElementById("notesDocx");
       if (activeJobId && hasScript) {
-        scriptDocxLink.href = `/api/jobs/document?id=${encodeURIComponent(activeJobId)}&kind=script`;
-        scriptDocxLink.setAttribute("aria-disabled", "false");
+        scriptLink.href = `/api/jobs/document?id=${encodeURIComponent(activeJobId)}&kind=script`;
+        scriptLink.setAttribute("aria-disabled", "false");
       } else {
-        scriptDocxLink.removeAttribute("href");
-        scriptDocxLink.setAttribute("aria-disabled", "true");
+        scriptLink.removeAttribute("href");
+        scriptLink.setAttribute("aria-disabled", "true");
       }
-
       if (activeJobId && hasNotes) {
-        notesDocxLink.href = `/api/jobs/document?id=${encodeURIComponent(activeJobId)}&kind=notes`;
-        notesDocxLink.setAttribute("aria-disabled", "false");
+        notesLink.href = `/api/jobs/document?id=${encodeURIComponent(activeJobId)}&kind=notes`;
+        notesLink.setAttribute("aria-disabled", "false");
       } else {
-        notesDocxLink.removeAttribute("href");
-        notesDocxLink.setAttribute("aria-disabled", "true");
+        notesLink.removeAttribute("href");
+        notesLink.setAttribute("aria-disabled", "true");
       }
+    }
+
+    function showReviewSections(status) {
+      const show = status === "complete";
+      document.getElementById("feedbackSection").style.display = show ? "" : "none";
+      document.getElementById("goldSection").style.display = show ? "" : "none";
     }
 
     function latestArtifact(artifacts, type) {
-      return [...(artifacts || [])].reverse().find((artifact) => artifact.type === type);
+      return [...(artifacts || [])].reverse().find((a) => a.type === type);
     }
 
-    function escapeHtml(value) {
-      return String(value)
+    // ==================== MARKDOWN RENDERER (minimal) ====================
+    function renderMarkdown(md) {
+      const lines = String(md).replace(/\r\n/g, "\n").split("\n");
+      let html = "";
+      let inTable = false;
+      let tableHeader = null;
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (trimmed.startsWith("|")) {
+          const cells = trimmed.split("|").slice(1, -1).map((c) => c.trim());
+          if (/^[-:\s|]+$/.test(trimmed) || cells.every((c) => /^[-:]+$/.test(c))) {
+            i++; continue;
+          }
+          if (!inTable) {
+            inTable = true;
+            tableHeader = cells;
+            html += `<table><thead><tr>${cells.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>`;
+          } else {
+            html += `<tr>${cells.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`;
+          }
+          i++;
+          continue;
+        }
+        if (inTable) { html += "</tbody></table>"; inTable = false; tableHeader = null; }
+        if (/^#{1,3}\s+/.test(trimmed)) {
+          const m = trimmed.match(/^(#{1,3})\s+(.+)$/);
+          html += `<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`;
+          i++; continue;
+        }
+        if (/^-\s+/.test(trimmed)) {
+          html += "<ul>";
+          while (i < lines.length && /^-\s+/.test(lines[i].trim())) {
+            html += `<li>${inline(lines[i].trim().slice(2))}</li>`;
+            i++;
+          }
+          html += "</ul>";
+          continue;
+        }
+        if (trimmed === "---") {
+          html += "<hr>";
+          i++; continue;
+        }
+        if (trimmed) {
+          html += `<p>${inline(trimmed)}</p>`;
+        }
+        i++;
+      }
+      if (inTable) html += "</tbody></table>";
+      return html;
+    }
+    function inline(text) {
+      return escapeHtml(text)
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/(?:^|[^*])\*([^*]+)\*/g, (m, p1) => m.replace(`*${p1}*`, `<em>${p1}</em>`));
+    }
+    function escapeHtml(v) {
+      return String(v)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
     }
+
+    // ==================== FEEDBACK ====================
+    document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!activeJobId) return;
+      const btn = document.getElementById("feedbackSubmit");
+      const status = document.getElementById("feedbackStatus");
+      const form = e.target;
+      btn.disabled = true;
+      status.textContent = "Saving...";
+      status.className = "review-status";
+      try {
+        const res = await fetch("/api/jobs/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobId: activeJobId,
+            rating: form.rating.value,
+            verdict: form.verdict.value,
+            comment: form.comment.value,
+            promoteToGold: form.verdict.value === "gold_candidate"
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Feedback save failed");
+        status.textContent = "Feedback saved. Thank you.";
+        status.className = "review-status success";
+      } catch (err) {
+        status.textContent = err.message;
+        status.className = "review-status error";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ==================== GOLD PROMOTION ====================
+    document.getElementById("goldForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!activeJobId) return;
+      const btn = document.getElementById("goldSubmit");
+      const status = document.getElementById("goldStatus");
+      const form = e.target;
+      btn.disabled = true;
+      status.textContent = "Reading final script...";
+      status.className = "review-status";
+      try {
+        const fileInput = document.getElementById("goldFinalFile");
+        const text = document.getElementById("goldFinalText").value.trim();
+        const file = fileInput.files?.[0];
+        if (!file && !text) throw new Error("Attach a file or paste the final edited script.");
+        let finalScript;
+        if (file) {
+          const ext = (file.name.split(".").pop() || "").toLowerCase();
+          const isText = ext === "txt" || ext === "md" || ext === "markdown" || (file.type || "").startsWith("text/");
+          if (isText) {
+            const t = await file.text();
+            finalScript = { text: t, filename: file.name, mediaType: file.type || "text/plain" };
+          } else {
+            const base64 = await readFileAsBase64(file);
+            finalScript = { base64, filename: file.name, mediaType: file.type || guessMediaType(file.name), text: text || "(uploaded file — see attachment)" };
+          }
+        } else {
+          finalScript = { text };
+        }
+        status.textContent = "Submitting...";
+        const res = await fetch("/api/jobs/gold-candidate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobId: activeJobId,
+            finalScript,
+            whyGold: form.whyGold.value,
+            whatChanged: form.whatChanged.value,
+            reviewerName: form.reviewerName.value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Gold candidate submission failed");
+        status.textContent = "Submitted. Mike will review the pair before it becomes a gold example.";
+        status.className = "review-status success";
+        form.reset();
+        document.getElementById("goldFinalText").value = "";
+        fileInput.value = "";
+      } catch (err) {
+        status.textContent = err.message;
+        status.className = "review-status error";
+      } finally {
+        btn.disabled = false;
+      }
+    });
   </script>
 </body>
 </html>
