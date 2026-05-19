@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -591,7 +592,7 @@
             <div class="upload-prompt">
               <div class="upload-icon">+</div>
               <div>Drop files here or <strong>browse</strong></div>
-              <div class="upload-hint">PDFs, Word docs, images. Up to 25 MB total. PDFs are auto-split into per-page visuals.</div>
+              <div class="upload-hint">PDFs, Word docs, images. Up to 80 MB total. PDFs are auto-split into per-page visuals.</div>
             </div>
             <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp" hidden>
           </div>
@@ -724,7 +725,26 @@
 
   <script>
     // ==================== STATE ====================
-    const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
+    let MAX_TOTAL_BYTES = 80 * 1024 * 1024;
+    let UPLOADS_BUCKET = "script-uploads";
+    let supabaseClient = null;
+    const sessionId = (crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+    async function initSupabaseFromConfig() {
+      try {
+        const res = await fetch("/api/config");
+        if (!res.ok) throw new Error(`config endpoint returned ${res.status}`);
+        const cfg = await res.json();
+        if (cfg.maxUploadBytes) MAX_TOTAL_BYTES = cfg.maxUploadBytes;
+        if (cfg.uploadsBucket) UPLOADS_BUCKET = cfg.uploadsBucket;
+        if (cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase?.createClient) {
+          supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+        }
+      } catch (err) {
+        console.warn("Supabase config not available — large uploads will fail.", err);
+      }
+    }
+    initSupabaseFromConfig();
     const IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]);
     const stageLabels = [
       ["diagnosis", "Diagnose"],
@@ -906,6 +926,33 @@
       });
     }
 
+    function safeFilename(name) {
+      return String(name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+    }
+
+    async function uploadFileToStorage(file, label, index) {
+      if (!supabaseClient) {
+        throw new Error("Supabase client is not ready. Reload the page and try again.");
+      }
+      const path = `${sessionId}/${index}-${safeFilename(file.name)}`;
+      const { error } = await supabaseClient.storage
+        .from(UPLOADS_BUCKET)
+        .upload(path, file, {
+          cacheControl: "3600",
+          contentType: file.type || guessMediaType(file.name),
+          upsert: false
+        });
+      if (error) throw new Error(`Upload of ${file.name} failed: ${error.message}`);
+      return {
+        filename: label || file.name,
+        source: label || file.name,
+        mediaType: file.type || guessMediaType(file.name),
+        storageBucket: UPLOADS_BUCKET,
+        storagePath: path,
+        sizeBytes: file.size
+      };
+    }
+
     function setupUploadZone(zoneId, inputId, onFiles) {
       const zone = document.getElementById(zoneId);
       const input = document.getElementById(inputId);
@@ -989,28 +1036,26 @@
         fullBrief += `\nBrief:\n${briefText}`;
       }
 
-      const attachments = [];
-      if (briefMode === "file" && briefFile) {
-        const base64 = await readFileAsBase64(briefFile);
-        attachments.push({
-          filename: `Brief: ${briefFile.name}`,
-          source: `Brief: ${briefFile.name}`,
-          mediaType: briefFile.type || guessMediaType(briefFile.name),
-          base64
-        });
-      }
-      for (const file of uploadedFiles) {
-        const base64 = await readFileAsBase64(file);
-        attachments.push({
-          filename: file.name,
-          source: file.name,
-          mediaType: file.type || guessMediaType(file.name),
-          base64
-        });
-      }
-
       const btn = document.getElementById("generateBtn");
       btn.disabled = true;
+      btn.textContent = "Uploading files...";
+
+      const attachments = [];
+      let uploadIndex = 0;
+      try {
+        if (briefMode === "file" && briefFile) {
+          attachments.push(await uploadFileToStorage(briefFile, `Brief: ${briefFile.name}`, uploadIndex++));
+        }
+        for (const file of uploadedFiles) {
+          attachments.push(await uploadFileToStorage(file, file.name, uploadIndex++));
+        }
+      } catch (err) {
+        showError(err.message);
+        btn.disabled = false;
+        btn.textContent = "Generate Script";
+        return;
+      }
+
       btn.textContent = "Submitting...";
       try {
         const response = await fetch("/api/jobs", {

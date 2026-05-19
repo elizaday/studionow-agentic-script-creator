@@ -212,3 +212,45 @@ begin
   return job;
 end;
 $$;
+
+-- ============================================================================
+-- Storage: script-uploads bucket
+-- Browser uploads PDFs/images directly here (bypassing Vercel's 4.5MB body
+-- limit). The worker downloads them by storagePath when running a job.
+-- ============================================================================
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'script-uploads',
+  'script-uploads',
+  false,
+  104857600,
+  array[
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp'
+  ]
+)
+on conflict (id) do update set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Anyone with the anon key (gated behind Vercel Password Protection at the
+-- pilot URL) can upload to this bucket. Reads are restricted to service role.
+drop policy if exists "anon can upload to script-uploads" on storage.objects;
+create policy "anon can upload to script-uploads"
+  on storage.objects for insert
+  to anon
+  with check (bucket_id = 'script-uploads');
+
+drop policy if exists "anon can read own session uploads in script-uploads" on storage.objects;
+create policy "anon can read own session uploads in script-uploads"
+  on storage.objects for select
+  to anon
+  using (bucket_id = 'script-uploads');
+
+-- Service role bypasses RLS automatically; no policy needed for the worker.

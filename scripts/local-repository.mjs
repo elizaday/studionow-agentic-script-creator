@@ -36,6 +36,11 @@ export function createLocalRepository({ outputDir }) {
     },
     async exampleUsage(jobId, examples) {
       exampleUsages.push({ jobId, examples });
+    },
+    async downloadFromStorage() {
+      throw new Error(
+        "Local runner does not support storage-path attachments. Pass --attach with a local file or use base64 directly."
+      );
     }
   };
 }

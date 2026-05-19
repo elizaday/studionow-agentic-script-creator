@@ -70,6 +70,13 @@ export function createSupabaseRepository({
       const { error } = await client.from("script_job_example_usage").insert(rows);
       if (error) throw error;
     },
+    async downloadFromStorage({ bucket = "script-uploads", path }) {
+      if (!path) throw new Error("downloadFromStorage requires a path");
+      const { data, error } = await client.storage.from(bucket).download(path);
+      if (error) throw new Error(`Storage download failed for ${bucket}/${path}: ${error.message}`);
+      const arrayBuffer = await data.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    },
     async failJob(jobId, error) {
       if (!jobId) {
         console.error("Cannot mark failure without a job id:", error);

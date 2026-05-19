@@ -36,7 +36,8 @@ export async function runStudioNowWorkflow({
 }) {
   const rawBrief = normalizeBrief(job.brief);
   const incomingAttachments = rawBrief.attachments || [];
-  const expandedAttachments = await expandPdfAttachments(incomingAttachments);
+  const hydratedAttachments = await hydrateStorageAttachments(incomingAttachments, repository);
+  const expandedAttachments = await expandPdfAttachments(hydratedAttachments);
   const rawAttachments = expandedAttachments;
   const briefWithExpanded = { ...rawBrief, attachments: expandedAttachments };
   const brief = stripBinaryAttachments(briefWithExpanded);
@@ -512,6 +513,31 @@ function createCostTotals() {
     unpricedStages: 0,
     modelName: null
   };
+}
+
+async function hydrateStorageAttachments(attachments, repository) {
+  if (!Array.isArray(attachments) || attachments.length === 0) return [];
+  const out = [];
+  for (const file of attachments) {
+    if (!file) continue;
+    if (file.base64) {
+      out.push(file);
+      continue;
+    }
+    if (file.storagePath && typeof repository?.downloadFromStorage === "function") {
+      const buf = await repository.downloadFromStorage({
+        bucket: file.storageBucket || "script-uploads",
+        path: file.storagePath
+      });
+      out.push({
+        ...file,
+        base64: buf.toString("base64")
+      });
+      continue;
+    }
+    out.push(file);
+  }
+  return out;
 }
 
 async function expandPdfAttachments(attachments) {
