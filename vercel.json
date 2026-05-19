@@ -1,13 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": "echo \"Static prototype, no build step\"",
+  "buildCommand": "echo Static prototype, no build step",
+  "installCommand": "npm install",
   "outputDirectory": "apps/web/public",
   "functions": {
     "api/**/*.mjs": {
-      "maxDuration": 60
-    },
-    "api/*.mjs": {
       "maxDuration": 60
     }
   }
