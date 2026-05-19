@@ -318,6 +318,10 @@ export async function runStudioNowWorkflow({
   const loops = isFirstDraftMode ? 0 : maxRevisionLoops;
 
   for (let loop = 0; loop <= loops; loop += 1) {
+    // Reset per-loop critique so a synthetic one from the previous iteration
+    // (e.g. runtime gate forcing a revision) doesn't suppress the critic
+    // on this new draft.
+    critique = undefined;
     await repository.updateJob(job.id, { current_stage: STAGES.RUNTIME });
     await repository.event(job.id, STAGES.RUNTIME, "Checking VO density and runtime honesty.");
     runtimeEdit = await withStageMetrics({
@@ -350,17 +354,50 @@ export async function runStudioNowWorkflow({
       modelStatus: runtimeEdit.status,
       modelRevisedVoWords: runtimeEdit.revisedVoWords
     });
-    if (honesty.errors.length > 0) {
-      throw new Error(`Runtime honesty gate failed: ${honesty.errors.join(" ")}`);
+
+    // Runtime gate has hard errors. Don't kill the job — turn it into a
+    // forced revision so the writer gets a chance to trim. Only fail-hard
+    // if we've already exhausted revision attempts.
+    if (honesty.errors.length > 0 && loop < maxRevisionLoops) {
+      const trimInstruction = `Runtime gate failed: ${honesty.errors.join(" ")} Your VO is over the hard ceiling. Cut the script to fit a word budget of ${runtimeTargets.wordBudget} VO words (hard ceiling ${honesty.metrics?.hardCeiling ?? "n/a"}). Trim weak transitions and redundant beats first. Keep the visual motif, structure, and direction from the blueprint intact.`;
+      critique = {
+        passes: false,
+        score: 0,
+        findings: [`Runtime gate: ${honesty.errors.join(" ")}`],
+        requiredRevisions: [trimInstruction]
+      };
+      await repository.event(
+        job.id,
+        STAGES.RUNTIME,
+        `Runtime gate over hard ceiling on loop ${loop + 1}. Forcing writer revision instead of failing the job.`,
+        "warn",
+        { kind: "runtime_gate_revision", loop: loop + 1, errors: honesty.errors, metrics: honesty.metrics }
+      );
+      await repository.artifact(job.id, "critique", `Critique ${loop + 1} (synthetic — runtime gate)`, critique);
+      // Skip the critic for this loop; the revision is mandated by the runtime gate.
+      if (loop === maxRevisionLoops) break;
+      // Fall through to the existing revision block at the bottom of the loop.
+    } else if (honesty.errors.length > 0) {
+      // Exhausted revisions. Log loudly but keep the script — partial
+      // delivery is more useful than a dead job. The reviewer sees the
+      // warning and can decide whether to accept.
+      await repository.event(
+        job.id,
+        STAGES.RUNTIME,
+        `Runtime gate still over hard ceiling after ${maxRevisionLoops + 1} write attempt(s). Delivering best draft with explicit warning.`,
+        "error",
+        { kind: "runtime_gate_exhausted", errors: honesty.errors, metrics: honesty.metrics }
+      );
     }
+
     await repository.event(
       job.id,
       STAGES.RUNTIME,
       honesty.warnings.length > 0
         ? `Deterministic runtime check: ${honesty.warnings.length} warning(s).`
-        : "Deterministic runtime check: OK.",
-      honesty.warnings.length > 0 ? "warn" : "info",
-      { kind: "runtime_gate", loop: loop + 1, warnings: honesty.warnings, metrics: honesty.metrics }
+        : (honesty.errors.length === 0 ? "Deterministic runtime check: OK." : "Deterministic runtime check: over budget, see above."),
+      honesty.warnings.length > 0 || honesty.errors.length > 0 ? "warn" : "info",
+      { kind: "runtime_gate", loop: loop + 1, warnings: honesty.warnings, errors: honesty.errors, metrics: honesty.metrics }
     );
 
     if (isFirstDraftMode) {
@@ -380,31 +417,36 @@ export async function runStudioNowWorkflow({
       break;
     }
 
-    await repository.updateJob(job.id, { current_stage: STAGES.CRITIQUE });
-    await repository.event(job.id, STAGES.CRITIQUE, "Running the ruthless critic pass.");
-    critique = await withStageMetrics({
-      modelClient,
-      repository,
-      jobId: job.id,
-      totals,
-      maxCostUsd,
-      stage: STAGES.CRITIQUE,
-      agentName: "critic",
-      run: async () => {
-        const out = await runCritic({
-          modelClient,
-          references: `${await loadReferencePack(rootDir, ["critique", "voice", "production"])}${formatExamplesForAgent(relevantExamples, "critic")}`,
-          brief,
-          diagnosis,
-          blueprint,
-          draft,
-          runtimeEdit
-        });
-        validateCritique(out);
-        return out;
-      }
-    });
-    await repository.artifact(job.id, "critique", `Critique ${loop + 1}`, critique);
+    // Skip the critic if the runtime gate already produced a synthetic
+    // critique. No point calling the critic on a script we already know is
+    // over budget — the writer needs to trim first.
+    if (!critique) {
+      await repository.updateJob(job.id, { current_stage: STAGES.CRITIQUE });
+      await repository.event(job.id, STAGES.CRITIQUE, "Running the ruthless critic pass.");
+      critique = await withStageMetrics({
+        modelClient,
+        repository,
+        jobId: job.id,
+        totals,
+        maxCostUsd,
+        stage: STAGES.CRITIQUE,
+        agentName: "critic",
+        run: async () => {
+          const out = await runCritic({
+            modelClient,
+            references: `${await loadReferencePack(rootDir, ["critique", "voice", "production"])}${formatExamplesForAgent(relevantExamples, "critic")}`,
+            brief,
+            diagnosis,
+            blueprint,
+            draft,
+            runtimeEdit
+          });
+          validateCritique(out);
+          return out;
+        }
+      });
+      await repository.artifact(job.id, "critique", `Critique ${loop + 1}`, critique);
+    }
 
     if (critique.passes || loop === maxRevisionLoops) break;
 
