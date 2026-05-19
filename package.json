@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "node apps/worker/src/index.mjs",
     "dev:web": "node apps/web/dev-server.mjs",
     "worker": "node apps/worker/src/index.mjs",
     "demo": "node scripts/run-local.mjs --brief evals/briefs.json",
