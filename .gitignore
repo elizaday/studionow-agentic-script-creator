@@ -15,3 +15,4 @@ outputs/
 # Raw client materials should stay local unless StudioNow explicitly approves
 # committing them to the private pilot repo.
 training_drop/
+.vercel

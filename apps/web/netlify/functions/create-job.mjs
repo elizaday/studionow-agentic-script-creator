@@ -26,12 +26,21 @@ function normalizeBrief(body) {
   if (!body?.brief || typeof body.brief !== "string" || body.brief.trim().length === 0) {
     throw new Error("brief is required");
   }
+  const workflowMode = normalizeWorkflowMode(body.workflowMode);
 
   return {
     brief: body.brief.trim(),
     name: body.name || "Untitled StudioNow Brief",
+    workflowMode,
     attachments: body.attachments || []
   };
+}
+
+function normalizeWorkflowMode(value) {
+  const mode = String(value || "").trim().toLowerCase();
+  if (mode === "first_draft" || mode === "fast" || mode === "draft") return "first_draft";
+  if (mode === "full_producer" || mode === "full" || mode === "producer") return "full_producer";
+  return "first_draft";
 }
 
 export const config = {

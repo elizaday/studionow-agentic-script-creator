@@ -12,6 +12,7 @@ import { createLocalRepository } from "./local-repository.mjs";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const useRealModel = args.includes("--real") || args.includes("--openai");
+const workflowMode = getArgValue("--mode") || process.env.WORKFLOW_MODE || "full_producer";
 const buildModelClient = () => (useRealModel ? createOpenAIModelClient() : createMockModelClient());
 
 const outputDir = resolve(ROOT, "outputs", "local-runs", timestamp());
@@ -28,6 +29,7 @@ for (const brief of selected) {
     brief: {
       id: brief.id,
       name: brief.name,
+      workflowMode,
       brief: brief.brief,
       expectedGenre: brief.expected_genre,
       runtimeSeconds: brief.runtime_seconds,
@@ -102,6 +104,12 @@ function selectBriefs(briefs) {
   }
 
   return [briefs[0]];
+}
+
+function getArgValue(flag) {
+  const index = args.indexOf(flag);
+  if (index === -1) return null;
+  return args[index + 1] || null;
 }
 
 function timestamp() {

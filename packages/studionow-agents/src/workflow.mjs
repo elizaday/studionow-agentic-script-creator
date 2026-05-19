@@ -26,6 +26,11 @@ import { evaluateRuntimeHonesty, resolveRuntimeTargets } from "./runtime-gate.mj
 import { computeCostUsd } from "./model/pricing.mjs";
 import { pdfToImageAttachments } from "./pdf-extract.mjs";
 
+export const WORKFLOW_MODES = Object.freeze({
+  FIRST_DRAFT: "first_draft",
+  FULL_PRODUCER: "full_producer"
+});
+
 export async function runStudioNowWorkflow({
   rootDir,
   modelClient,
@@ -35,9 +40,23 @@ export async function runStudioNowWorkflow({
   maxCostUsd = Number(process.env.MAX_JOB_COST_USD || 2)
 }) {
   const rawBrief = normalizeBrief(job.brief);
+  const workflowMode = resolveWorkflowMode(rawBrief.workflowMode || job.workflow_mode);
+  const isFirstDraftMode = workflowMode === WORKFLOW_MODES.FIRST_DRAFT;
   const incomingAttachments = rawBrief.attachments || [];
-  const hydratedAttachments = await hydrateStorageAttachments(incomingAttachments, repository);
-  const expandedAttachments = await expandPdfAttachments(hydratedAttachments);
+
+  // First Draft mode: ignore attachments completely. No Storage download,
+  // no PDF expansion, no Visual Intake. The agent works from brief text only.
+  // This is the explicit fast path for text briefs and intake forms.
+  let hydratedAttachments;
+  let expandedAttachments;
+  if (isFirstDraftMode) {
+    hydratedAttachments = [];
+    expandedAttachments = [];
+  } else {
+    hydratedAttachments = await hydrateStorageAttachments(incomingAttachments, repository);
+    expandedAttachments = await expandPdfAttachments(hydratedAttachments);
+  }
+
   const rawAttachments = expandedAttachments;
   const briefWithExpanded = { ...rawBrief, attachments: expandedAttachments };
   const brief = stripBinaryAttachments(briefWithExpanded);
@@ -45,6 +64,20 @@ export async function runStudioNowWorkflow({
   const totals = createCostTotals();
 
   await repository.updateJob(job.id, { status: STATUS.RUNNING, current_stage: STAGES.DIAGNOSIS });
+  await repository.event(job.id, STAGES.DIAGNOSIS, `Workflow mode: ${workflowModeLabel(workflowMode)}.`, "info", {
+    kind: "workflow_mode",
+    workflow_mode: workflowMode,
+    ignored_attachments: isFirstDraftMode ? incomingAttachments.length : 0
+  });
+  if (isFirstDraftMode && incomingAttachments.length > 0) {
+    await repository.event(
+      job.id,
+      STAGES.DIAGNOSIS,
+      `First Draft mode ignored ${incomingAttachments.length} attached file(s). Use Full Producer mode if the visuals or deck content matter for this brief.`,
+      "info",
+      { kind: "attachments_ignored", count: incomingAttachments.length }
+    );
+  }
   await repository.event(job.id, STAGES.DIAGNOSIS, "Diagnosing the assignment before writing.");
   const diagnosis = await withStageMetrics({
     modelClient,
@@ -92,8 +125,17 @@ export async function runStudioNowWorkflow({
   await repository.artifact(job.id, "source_mining", "Source Mining", mined);
 
   const imageAttachments = collectImageAttachments(rawAttachments);
+  const visualCandidateCount = countVisualCandidates(rawAttachments);
   let visualInventory = { inventory: [], notes: "" };
-  if (imageAttachments.length > 0) {
+  if (visualCandidateCount > 0 && isFirstDraftMode) {
+    await repository.event(
+      job.id,
+      STAGES.VISUAL_INTAKE,
+      `First Draft mode skipped visual intake for ${visualCandidateCount} attached visual file(s). Use Full Producer mode when asset-specific visuals matter.`,
+      "info",
+      { kind: "stage_skipped", workflow_mode: workflowMode, skipped_visual_files: visualCandidateCount }
+    );
+  } else if (imageAttachments.length > 0) {
     await repository.updateJob(job.id, { current_stage: STAGES.VISUAL_INTAKE });
     await repository.event(
       job.id,
@@ -162,32 +204,46 @@ export async function runStudioNowWorkflow({
     });
   }
 
-  await repository.updateJob(job.id, { current_stage: STAGES.STRATEGY });
-  await repository.event(job.id, STAGES.STRATEGY, "Choosing the story engine and direction.");
-  const strategy = await withStageMetrics({
-    modelClient,
-    repository,
-    jobId: job.id,
-    totals,
-    maxCostUsd,
-    stage: STAGES.STRATEGY,
-    agentName: "strategist",
-    run: async () => {
-      const out = await runStrategist({
-        modelClient,
-        references: `${await loadReferencePack(rootDir, ["strategy", "voice"])}${formatExamplesForAgent(relevantExamples, "strategist")}`,
-        brief,
-        diagnosis,
-        mined
-      });
-      validateStrategy(out);
-      return applySelectedDirection(out, job.selected_direction_id);
-    }
-  });
+  let strategy;
+  if (isFirstDraftMode) {
+    await repository.updateJob(job.id, { current_stage: STAGES.STRATEGY });
+    strategy = buildFirstDraftStrategy({ diagnosis, mined });
+    validateStrategy(strategy);
+    await repository.event(
+      job.id,
+      STAGES.STRATEGY,
+      "First Draft mode used a direct single-direction strategy instead of generating multiple concept options.",
+      "info",
+      { kind: "stage_shortcut", workflow_mode: workflowMode }
+    );
+  } else {
+    await repository.updateJob(job.id, { current_stage: STAGES.STRATEGY });
+    await repository.event(job.id, STAGES.STRATEGY, "Choosing the story engine and direction.");
+    strategy = await withStageMetrics({
+      modelClient,
+      repository,
+      jobId: job.id,
+      totals,
+      maxCostUsd,
+      stage: STAGES.STRATEGY,
+      agentName: "strategist",
+      run: async () => {
+        const out = await runStrategist({
+          modelClient,
+          references: `${await loadReferencePack(rootDir, ["strategy", "voice"])}${formatExamplesForAgent(relevantExamples, "strategist")}`,
+          brief,
+          diagnosis,
+          mined
+        });
+        validateStrategy(out);
+        return applySelectedDirection(out, job.selected_direction_id);
+      }
+    });
+  }
   validateStrategy(strategy);
   await repository.artifact(job.id, "strategy", "Concept Strategy", strategy);
 
-  if (job.selected_direction_id) {
+  if (!isFirstDraftMode && job.selected_direction_id) {
     await repository.event(job.id, STAGES.STRATEGY, `Using selected direction: ${strategy.recommendedDirectionId}.`, "info", {
       kind: "selected_direction",
       requested_direction_id: job.selected_direction_id,
@@ -195,7 +251,7 @@ export async function runStudioNowWorkflow({
     });
   }
 
-  if (strategy.needsDirectionChoice && !job.selected_direction_id) {
+  if (!isFirstDraftMode && strategy.needsDirectionChoice && !job.selected_direction_id) {
     await repository.updateJob(job.id, {
       status: STATUS.WAITING_FOR_DIRECTION,
       current_stage: STAGES.STRATEGY
@@ -259,8 +315,9 @@ export async function runStudioNowWorkflow({
 
   let runtimeEdit;
   let critique;
+  const loops = isFirstDraftMode ? 0 : maxRevisionLoops;
 
-  for (let loop = 0; loop <= maxRevisionLoops; loop += 1) {
+  for (let loop = 0; loop <= loops; loop += 1) {
     await repository.updateJob(job.id, { current_stage: STAGES.RUNTIME });
     await repository.event(job.id, STAGES.RUNTIME, "Checking VO density and runtime honesty.");
     runtimeEdit = await withStageMetrics({
@@ -305,6 +362,23 @@ export async function runStudioNowWorkflow({
       honesty.warnings.length > 0 ? "warn" : "info",
       { kind: "runtime_gate", loop: loop + 1, warnings: honesty.warnings, metrics: honesty.metrics }
     );
+
+    if (isFirstDraftMode) {
+      await repository.event(
+        job.id,
+        STAGES.CRITIQUE,
+        "First Draft mode skipped critic and revision loop. Use Full Producer mode for a producer-grade critique pass.",
+        "info",
+        { kind: "stage_skipped", workflow_mode: workflowMode }
+      );
+      critique = {
+        passes: true,
+        score: 0,
+        findings: ["Critic skipped in First Draft mode."],
+        requiredRevisions: []
+      };
+      break;
+    }
 
     await repository.updateJob(job.id, { current_stage: STAGES.CRITIQUE });
     await repository.event(job.id, STAGES.CRITIQUE, "Running the ruthless critic pass.");
@@ -609,6 +683,15 @@ function collectImageAttachments(attachments) {
   return out;
 }
 
+function countVisualCandidates(attachments) {
+  if (!Array.isArray(attachments)) return 0;
+  return attachments.filter((file) => {
+    if (!file || !file.mediaType) return false;
+    const mediaType = String(file.mediaType);
+    return mediaType.startsWith("image/") || mediaType === "application/pdf";
+  }).length;
+}
+
 function normalizeMinedOutput(mined, { diagnosis, brief } = {}) {
   const out = mined && typeof mined === "object" && !Array.isArray(mined) ? { ...mined } : {};
   const assetNotes = out.assetNotes && typeof out.assetNotes === "object" && !Array.isArray(out.assetNotes)
@@ -702,6 +785,56 @@ function normalizeBrief(brief) {
     return brief;
   }
   throw new Error("Job brief must be a string or object");
+}
+
+function resolveWorkflowMode(value) {
+  const mode = String(value || "").trim().toLowerCase();
+  if (mode === WORKFLOW_MODES.FIRST_DRAFT || mode === "fast" || mode === "draft") {
+    return WORKFLOW_MODES.FIRST_DRAFT;
+  }
+  if (mode === WORKFLOW_MODES.FULL_PRODUCER || mode === "full" || mode === "producer") {
+    return WORKFLOW_MODES.FULL_PRODUCER;
+  }
+  return WORKFLOW_MODES.FULL_PRODUCER;
+}
+
+function workflowModeLabel(mode) {
+  return mode === WORKFLOW_MODES.FIRST_DRAFT ? "First Draft" : "Full Producer";
+}
+
+function buildFirstDraftStrategy({ diagnosis, mined }) {
+  const direction = {
+    id: "direct-first-draft",
+    name: "Direct First Draft",
+    coreEngine: inferCoreEngine(diagnosis, mined),
+    whatMakesItWork: "Gets to a credible, editable script quickly by using the diagnosed tension, mined proof, and StudioNow examples without pausing for concept options.",
+    mainRisk: "Less producer-level exploration; visual motif and transitions may need a human or Full Producer pass.",
+    whyItFits: "Best when the priority is a strong starting draft instead of a fully challenged producer blueprint."
+  };
+
+  return {
+    needsDirectionChoice: false,
+    directions: [direction],
+    recommendedDirectionId: direction.id,
+    selectedDirection: direction,
+    storyArc: {
+      act1: diagnosis?.openingTension || mined?.humanTension || "Open on the audience tension.",
+      act2: "Use the strongest proof, behaviors, and brand details from the brief to make the idea concrete.",
+      act3: diagnosis?.closingMove || "Land the assignment with a clear closing move and end feeling."
+    },
+    workflowMode: WORKFLOW_MODES.FIRST_DRAFT
+  };
+}
+
+function inferCoreEngine(diagnosis, mined) {
+  const format = String(diagnosis?.format || "").toLowerCase();
+  const metrics = Array.isArray(mined?.metrics) ? mined.metrics : [];
+  const frameworks = Array.isArray(mined?.strategicFrameworks) ? mined.strategicFrameworks : [];
+  if (frameworks.length > 0) return "Framework";
+  if (metrics.length > 0 || format.includes("case") || format.includes("award")) return "Proof";
+  if (format.includes("explainer") || format.includes("training")) return "Reveal";
+  if (format.includes("sizzle")) return "Escalation";
+  return "Tension to Resolution";
 }
 
 function applySelectedDirection(strategy, selectedDirectionId) {

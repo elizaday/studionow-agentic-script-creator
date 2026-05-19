@@ -243,6 +243,30 @@
     .brief-mode-btn + .brief-mode-btn { border-left: 1px solid var(--border); }
     .brief-mode-btn.active { background: var(--dark); color: var(--white); }
 
+    .workflow-mode {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px; margin-bottom: 20px;
+    }
+    .workflow-mode-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--med); cursor: pointer;
+      font-family: inherit; padding: 14px 16px; text-align: left;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .workflow-mode-btn strong {
+      display: block; color: var(--dark); font-size: 15px; margin-bottom: 4px;
+    }
+    .workflow-mode-btn span {
+      display: block; font-size: 12px; line-height: 1.4;
+    }
+    .workflow-mode-btn.active {
+      background: #f5f9ff; border-color: var(--blue); color: var(--dark);
+    }
+    .workflow-mode-btn.active strong { color: var(--blue); }
+    @media (max-width: 700px) {
+      .workflow-mode { grid-template-columns: 1fr; }
+    }
+
     .btn-generate {
       display: inline-flex; align-items: center; gap: 8px;
       background: var(--blue); color: var(--white); border: none;
@@ -470,7 +494,19 @@
     <!-- BRIEF FORM -->
     <div class="brief-section">
       <h2>Write a Script</h2>
-      <p class="description">Describe your project and the agent will generate a production-ready script in StudioNow format. Attach reference files to sharpen the output. Runs take 3–8 minutes; you can leave the tab open.</p>
+      <p class="description">Describe your project and the agent will generate a StudioNow-format script. First Draft is faster; Full Producer is deeper when attachments, visuals, and critique matter.</p>
+
+      <div class="section-label">Workflow Mode</div>
+      <div class="workflow-mode">
+        <button type="button" class="workflow-mode-btn active" id="modeFirstDraft" onclick="setWorkflowMode('first_draft')">
+          <strong>First Draft</strong>
+          <span>Faster. Best for a strong editable script from a pasted brief.</span>
+        </button>
+        <button type="button" class="workflow-mode-btn" id="modeFullProducer" onclick="setWorkflowMode('full_producer')">
+          <strong>Full Producer</strong>
+          <span>Deeper. Uses visual intake, concept strategy, critique, and revision.</span>
+        </button>
+      </div>
 
       <!-- Project Basics -->
       <div class="section-label">Project Basics</div>
@@ -728,6 +764,7 @@
     let MAX_TOTAL_BYTES = 80 * 1024 * 1024;
     let UPLOADS_BUCKET = "script-uploads";
     let supabaseClient = null;
+    let workflowMode = "first_draft";
     const sessionId = (crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
     async function initSupabaseFromConfig() {
@@ -809,6 +846,12 @@
     let selectedAudio = null;
     let briefMode = "text";
     let briefFile = null;
+
+    function setWorkflowMode(mode) {
+      workflowMode = mode === "full_producer" ? "full_producer" : "first_draft";
+      document.getElementById("modeFirstDraft").classList.toggle("active", workflowMode === "first_draft");
+      document.getElementById("modeFullProducer").classList.toggle("active", workflowMode === "full_producer");
+    }
     let uploadedFiles = [];
     let activeJobId = null;
     let pollTimer = null;
@@ -1024,6 +1067,7 @@
       if (client) fullBrief += `Client: ${client}\n`;
       if (projectDate) fullBrief += `Date: ${projectDate}\n`;
       if (version) fullBrief += `Version: ${version}\n`;
+      fullBrief += `Workflow Mode: ${workflowMode === "first_draft" ? "First Draft" : "Full Producer"}\n`;
       fullBrief += `Internal/External: ${audience}\n`;
       fullBrief += `Script Type: ${scriptType}\n`;
       fullBrief += `Tone: ${selectedTones.join(" + ")}\n`;
@@ -1063,6 +1107,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: projectName || `${scriptType} — ${runtime}`,
+            workflowMode,
             brief: fullBrief,
             attachments
           })

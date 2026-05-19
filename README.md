@@ -29,7 +29,12 @@ Vercel UI/API
 
 The old app asks one model to do everything with one large prompt.
 
-This version creates a staged creative process:
+This version creates two staged creative paths:
+
+- **First Draft**: faster default path for getting to an editable script. It diagnoses, mines, retrieves examples, builds a blueprint, writes, runtime-checks, and formats deliverables. It skips visual intake, concept-option selection, and critic/revision.
+- **Full Producer**: deeper path for complex briefs, heavy attachments, visual references, and higher-stakes drafts. It runs the full agent workflow below.
+
+The full workflow is:
 
 1. **Diagnoser** locks the assignment and flags missing inputs.
 2. **Miner** extracts usable material from the brief and attachments.

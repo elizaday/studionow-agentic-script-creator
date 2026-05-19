@@ -11,6 +11,7 @@
     "demo:quick": "node scripts/run-local.mjs --quick",
     "brief": "node scripts/run-brief.mjs",
     "check": "node scripts/run-local.mjs --quick --assert",
+    "check:first-draft": "node scripts/run-local.mjs --quick --assert --mode first_draft",
     "training:ingest": "node scripts/ingest-training-examples.mjs",
     "examples:ingest": "node scripts/ingest-example-library.mjs",
     "gold:ingest": "node scripts/ingest-gold-candidates.mjs",
