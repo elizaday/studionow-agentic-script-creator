@@ -83,8 +83,9 @@ export async function runStudioNowWorkflow({
         diagnosis,
         attachments
       });
-      validateMined(out);
-      return out;
+      const normalized = normalizeMinedOutput(out, { diagnosis, brief });
+      validateMined(normalized);
+      return normalized;
     }
   });
   await repository.artifact(job.id, "source_mining", "Source Mining", mined);
@@ -580,6 +581,67 @@ function collectImageAttachments(attachments) {
     });
   }
   return out;
+}
+
+function normalizeMinedOutput(mined, { diagnosis, brief } = {}) {
+  const out = mined && typeof mined === "object" && !Array.isArray(mined) ? { ...mined } : {};
+  const assetNotes = out.assetNotes && typeof out.assetNotes === "object" && !Array.isArray(out.assetNotes)
+    ? { ...out.assetNotes }
+    : {};
+
+  out.humanTension = firstNonEmptyString(
+    out.humanTension,
+    out.openingTension,
+    out.tension,
+    out.coreTension,
+    diagnosis?.openingTension,
+    extractBriefLine(brief, "Human Tension"),
+    extractBriefLine(brief, "Opening Tension"),
+    "The audience needs a clear reason to care before the solution or offer can land."
+  );
+  out.metrics = ensureArray(out.metrics);
+  out.strategicFrameworks = ensureArray(out.strategicFrameworks);
+  out.brandLanguage = ensureArray(out.brandLanguage);
+  out.clearanceFlags = ensureArray(out.clearanceFlags);
+  out.usableAmmunition = ensureArray(out.usableAmmunition);
+  out.assetNotes = {
+    existing: firstNonEmptyString(
+      assetNotes.existing,
+      assetNotes.current,
+      diagnosis?.existingAssets,
+      extractBriefLine(brief, "Existing Assets"),
+      "Not specified"
+    ),
+    missing: firstNonEmptyString(
+      assetNotes.missing,
+      assetNotes.needed,
+      extractBriefLine(brief, "Missing Assets"),
+      "Not specified"
+    )
+  };
+
+  return out;
+}
+
+function firstNonEmptyString(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function ensureArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value == null || value === "") return [];
+  return [value];
+}
+
+function extractBriefLine(brief, label) {
+  const text = typeof brief === "string" ? brief : brief?.brief || brief?.text || "";
+  if (!text) return "";
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = text.match(new RegExp(`^\\s*${escaped}\\s*:\\s*(.+)$`, "im"));
+  return match?.[1] || "";
 }
 
 function stripModelPrefix(name) {

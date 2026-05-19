@@ -1,6 +1,7 @@
 import { runAgent, baseSystem } from "./run-agent.mjs";
 
 const MAX_IMAGES_PER_CALL = 3;
+const MAX_PARALLEL_BATCHES = Number(process.env.VISUAL_INTAKE_PARALLELISM || 6);
 
 export async function runVisualIntake({ modelClient, references, brief, diagnosis, mined, imageAttachments }) {
   if (!Array.isArray(imageAttachments) || imageAttachments.length === 0) {
@@ -8,11 +9,9 @@ export async function runVisualIntake({ modelClient, references, brief, diagnosi
   }
 
   const batches = chunk(imageAttachments, MAX_IMAGES_PER_CALL);
-  const allEntries = [];
-  let combinedNotes = [];
+  const system = baseSystem({ role: "Visual Intake", references });
 
-  for (let batchIndex = 0; batchIndex < batches.length; batchIndex += 1) {
-    const batch = batches[batchIndex];
+  const batchResults = await runWithConcurrency(batches, MAX_PARALLEL_BATCHES, async (batch, batchIndex) => {
     const visionImages = batch.map((image) => ({
       base64: image.base64,
       mediaType: image.mediaType,
@@ -32,10 +31,10 @@ export async function runVisualIntake({ modelClient, references, brief, diagnosi
       imageManifest
     };
 
-    const result = await runAgent({
+    return runAgent({
       modelClient,
       agentName: "visual_intake",
-      system: baseSystem({ role: "Visual Intake", references }),
+      system,
       payload,
       instructions: `You are looking at ${batch.length} attached image(s) in the order listed in imageManifest. Build a concrete visual inventory that downstream writers can reference by id.
 
@@ -70,13 +69,13 @@ Rules:
 - "notes" at the top level can summarize patterns across the batch (consistent style, recurring talent, etc.) or stay empty.`,
       images: visionImages
     });
+  });
 
-    if (Array.isArray(result?.inventory)) {
-      allEntries.push(...result.inventory);
-    }
-    if (typeof result?.notes === "string" && result.notes.trim()) {
-      combinedNotes.push(result.notes.trim());
-    }
+  const allEntries = [];
+  const combinedNotes = [];
+  for (const result of batchResults) {
+    if (Array.isArray(result?.inventory)) allEntries.push(...result.inventory);
+    if (typeof result?.notes === "string" && result.notes.trim()) combinedNotes.push(result.notes.trim());
   }
 
   return {
@@ -91,6 +90,20 @@ function chunk(array, size) {
     out.push(array.slice(i, i + size));
   }
   return out;
+}
+
+async function runWithConcurrency(items, concurrency, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 function summarizeBrief(brief) {
