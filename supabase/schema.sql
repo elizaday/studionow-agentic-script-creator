@@ -96,7 +96,7 @@ create table if not exists public.script_examples (
 
 create table if not exists public.script_gold_candidates (
   id uuid primary key default gen_random_uuid(),
-  job_id uuid not null references public.script_jobs(id) on delete cascade,
+  job_id uuid references public.script_jobs(id) on delete cascade,
   artifact_id uuid references public.script_artifacts(id) on delete set null,
   reviewer_name text,
   reviewer_email text,
@@ -123,8 +123,27 @@ alter table public.script_gold_candidates
   add constraint script_gold_candidates_status_check
   check (status in ('pending', 'approved', 'rejected', 'ingested'));
 
+-- Trainer (direct curator uploads) submits without a parent job. Original
+-- gold candidates from the agent UI still have job_id set.
+alter table public.script_gold_candidates
+  alter column job_id drop not null;
+
+alter table public.script_gold_candidates
+  add column if not exists source text not null default 'agent_run',
+  add column if not exists project_name text,
+  add column if not exists client text,
+  add column if not exists brief_filename text,
+  add column if not exists brief_media_type text,
+  add column if not exists brief_storage_path text,
+  add column if not exists final_script_storage_path text,
+  add column if not exists tags text[] not null default '{}',
+  add column if not exists teaching_points text[] not null default '{}';
+
 create index if not exists script_gold_candidates_status_idx
   on public.script_gold_candidates(status, created_at);
+
+create index if not exists script_gold_candidates_source_idx
+  on public.script_gold_candidates(source, status);
 
 create index if not exists script_gold_candidates_job_id_idx
   on public.script_gold_candidates(job_id);
