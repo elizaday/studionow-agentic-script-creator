@@ -16,6 +16,7 @@
     "examples:ingest": "node scripts/ingest-example-library.mjs",
     "gold:ingest": "node scripts/ingest-gold-candidates.mjs",
     "gold:import-pair": "node scripts/import-gold-pair.mjs",
+    "bakeoff": "node scripts/bakeoff.mjs",
     "supabase:verify": "node scripts/verify-supabase.mjs"
   },
   "dependencies": {

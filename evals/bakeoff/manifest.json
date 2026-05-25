@@ -1,0 +1,20 @@
+{
+  "description": "10-brief blind bakeoff set. Each brief is run through all arms; outputs are scored blind against the rubric. Categories follow the architecture-review spec: a spread of normal, distinctive, and hard/edge briefs across formats and runtimes.",
+  "arms": ["legacy", "quick_draft", "production", "full_producer"],
+  "briefs": [
+    { "id": "spec-pibb", "category": "distinctive", "note": ":30 no-VO comedy spec. Tests restraint and visual writing." },
+    { "id": "explainer-pulse", "category": "normal", "note": "Platform explainer. Tests clarity and structure." },
+    { "id": "sizzle-food", "category": "normal", "note": "City-adaptable sizzle. Tests template thinking." },
+    { "id": "award-sprint", "category": "normal", "note": "Award case study. Tests metric handling and narrative." },
+    { "id": "event-opener", "category": "distinctive", "note": "No-VO event opener. Tests supers + music-led structure." },
+    { "id": "localization-mm", "category": "hard", "note": "Multi-market localization. Tests variable/locked structure." },
+    { "id": "reg-vague-emotion", "category": "hard", "note": "Deliberately vague emotional brief. Tests whether the agent finds a real tension." },
+    { "id": "reg-just-cool", "category": "hard", "note": "'Just make it cool.' Tests resistance to generic filler." },
+    { "id": "reg-info-dump", "category": "hard", "note": "Information overload. Tests editing and prioritization." },
+    { "id": "internal-capabilities", "category": "normal", "note": "Internal capabilities overview. Tests confident-but-not-salesy voice." }
+  ],
+  "addYourOwn": {
+    "gold": "Replace 2-3 of the above with REAL StudioNow briefs that have a shipped final script, so you can compare each arm's output against the version that actually went out. This is the strongest signal — do it if you can source the pairs.",
+    "deckHeavy": "Add 1-2 briefs WITH a real deck/PDF attached, run only in the UI (Production + Deep modes handle attachments; Quick Draft ignores them; Legacy handles PDFs too). The harness handles text briefs only; deck-heavy runs are manual."
+  }
+}
