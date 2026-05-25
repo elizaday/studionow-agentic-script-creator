@@ -2,6 +2,7 @@ import { STATUS, STAGES } from "./stages.mjs";
 import { loadReferencePack } from "./reference-loader.mjs";
 import { runDiagnoser } from "./agents/diagnoser.mjs";
 import { runMiner } from "./agents/miner.mjs";
+import { runPlanner } from "./agents/planner.mjs";
 import { runVisualIntake } from "./agents/visual-intake.mjs";
 import { runStrategist } from "./agents/strategist.mjs";
 import { runProducer } from "./agents/producer.mjs";
@@ -20,7 +21,8 @@ import {
   validateDraft,
   validateRuntimeEdit,
   validateCritique,
-  validateFormatted
+  validateFormatted,
+  validatePlan
 } from "./stage-schemas.mjs";
 import { evaluateRuntimeHonesty, resolveRuntimeTargets } from "./runtime-gate.mjs";
 import { computeCostUsd } from "./model/pricing.mjs";
@@ -28,6 +30,7 @@ import { pdfToImageAttachments } from "./pdf-extract.mjs";
 
 export const WORKFLOW_MODES = Object.freeze({
   FIRST_DRAFT: "first_draft",
+  PRODUCTION: "production",
   FULL_PRODUCER: "full_producer"
 });
 
@@ -41,6 +44,14 @@ export async function runStudioNowWorkflow({
 }) {
   const rawBrief = normalizeBrief(job.brief);
   const workflowMode = resolveWorkflowMode(rawBrief.workflowMode || job.workflow_mode);
+
+  // Lean Production mode runs on a separate, self-contained path so it can
+  // never disturb the two established modes. One Planner call replaces the
+  // diagnose/mine/strategize/blueprint chain.
+  if (workflowMode === WORKFLOW_MODES.PRODUCTION) {
+    return runLeanProductionWorkflow({ rootDir, modelClient, job, repository, rawBrief, maxRevisionLoops, maxCostUsd });
+  }
+
   const isFirstDraftMode = workflowMode === WORKFLOW_MODES.FIRST_DRAFT;
   const incomingAttachments = rawBrief.attachments || [];
 
@@ -558,6 +569,204 @@ export async function runStudioNowWorkflow({
   return { status: STATUS.COMPLETE, diagnosis, mined, visualInventory, strategy, blueprint, draft, runtimeEdit, critique, final: preparedFinal, totals };
 }
 
+// Lean Production Package mode. Self-contained so it cannot disturb the
+// First Draft / Full Producer paths. One Planner call replaces the
+// diagnose+mine+strategize+blueprint chain; then writer, deterministic
+// runtime gate (with one forced trim if over budget), and producer notes.
+// No standalone critic, no concept-option pause.
+async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository, rawBrief, maxRevisionLoops, maxCostUsd }) {
+  const incomingAttachments = rawBrief.attachments || [];
+  const hydratedAttachments = await hydrateStorageAttachments(incomingAttachments, repository);
+  const expandedAttachments = await expandPdfAttachments(hydratedAttachments);
+  const rawAttachments = expandedAttachments;
+  const brief = stripBinaryAttachments({ ...rawBrief, attachments: expandedAttachments });
+  const totals = createCostTotals();
+  const loops = Math.max(0, maxRevisionLoops);
+
+  await repository.updateJob(job.id, { status: STATUS.RUNNING, current_stage: STAGES.DIAGNOSIS });
+  await repository.event(job.id, STAGES.DIAGNOSIS, "Workflow mode: Production Package.", "info", {
+    kind: "workflow_mode",
+    workflow_mode: WORKFLOW_MODES.PRODUCTION
+  });
+
+  // 1. Optional visual intake (only when images/decks are attached).
+  const imageAttachments = collectImageAttachments(rawAttachments);
+  let visualInventory = { inventory: [], notes: "" };
+  if (imageAttachments.length > 0) {
+    await repository.updateJob(job.id, { current_stage: STAGES.VISUAL_INTAKE });
+    await repository.event(job.id, STAGES.VISUAL_INTAKE, `Running visual intake on ${imageAttachments.length} attached image(s).`);
+    visualInventory = await withStageMetrics({
+      modelClient, repository, jobId: job.id, totals, maxCostUsd,
+      stage: STAGES.VISUAL_INTAKE, agentName: "visual_intake",
+      run: async () => {
+        const out = await runVisualIntake({
+          modelClient,
+          references: await loadReferencePack(rootDir, ["production", "voice"]),
+          brief, diagnosis: null, mined: null, imageAttachments
+        });
+        validateVisualInventory(out);
+        return out;
+      }
+    });
+    await repository.artifact(job.id, "visual_inventory", "Visual Inventory", visualInventory);
+  }
+
+  // 2. One planning call (diagnose + mine + strategy + blueprint).
+  await repository.updateJob(job.id, { current_stage: STAGES.STRATEGY });
+  await repository.event(job.id, STAGES.STRATEGY, "Planning the production in one pass (diagnose, mine, strategy, blueprint).");
+  const plan = await withStageMetrics({
+    modelClient, repository, jobId: job.id, totals, maxCostUsd,
+    stage: STAGES.BLUEPRINT, agentName: "planner",
+    run: async () => {
+      const out = await runPlanner({
+        modelClient,
+        references: await loadReferencePack(rootDir, ["context", "diagnosis", "strategy", "production", "voice"]),
+        brief,
+        visualInventory
+      });
+      validatePlan(out);
+      return out;
+    }
+  });
+  const diagnosis = plan.diagnosis;
+  const mined = normalizeMinedOutput(plan.mined, { diagnosis, brief });
+  const strategy = plan.strategy;
+  const blueprint = plan.blueprint;
+  await repository.artifact(job.id, "diagnosis", "Brief Diagnosis", diagnosis);
+  await repository.artifact(job.id, "source_mining", "Source Mining", mined);
+  await repository.artifact(job.id, "strategy", "Concept Strategy", strategy);
+  await repository.artifact(job.id, "script_blueprint", "Script Blueprint", blueprint);
+
+  // 3. Example retrieval (taste anchors).
+  const relevantExamples = selectRelevantExamples({ rootDir, brief, diagnosis, mined, limit: 3 });
+  if (relevantExamples.length > 0 && typeof repository.exampleUsage === "function") {
+    await repository.exampleUsage(job.id, relevantExamples);
+  }
+
+  // 4. Writer.
+  await repository.updateJob(job.id, { current_stage: STAGES.DRAFT });
+  await repository.event(job.id, STAGES.DRAFT, "Writing the three-column draft.");
+  let draft = await withStageMetrics({
+    modelClient, repository, jobId: job.id, totals, maxCostUsd,
+    stage: STAGES.DRAFT, agentName: "writer",
+    run: async () => {
+      const out = await runWriter({
+        modelClient,
+        references: `${await loadReferencePack(rootDir, ["voice", "format"])}${formatExamplesForAgent(relevantExamples, "writer")}`,
+        brief, diagnosis, mined, strategy, blueprint, visualInventory
+      });
+      validateDraft(out);
+      return out;
+    }
+  });
+  await repository.artifact(job.id, "draft_script", "Draft Script", draft, draft.markdown);
+
+  // 5. Deterministic runtime gate with a single forced trim if over budget.
+  let runtimeEdit;
+  for (let loop = 0; loop <= loops; loop += 1) {
+    await repository.updateJob(job.id, { current_stage: STAGES.RUNTIME });
+    await repository.event(job.id, STAGES.RUNTIME, "Checking VO density and runtime honesty.");
+    runtimeEdit = await withStageMetrics({
+      modelClient, repository, jobId: job.id, totals, maxCostUsd,
+      stage: STAGES.RUNTIME, agentName: "runtime_editor",
+      run: async () => {
+        const out = await runRuntimeEditor({
+          modelClient,
+          references: await loadReferencePack(rootDir, ["voice", "format"]),
+          brief, diagnosis, blueprint, draft
+        });
+        validateRuntimeEdit(out);
+        return out;
+      }
+    });
+    await repository.artifact(job.id, "runtime_pass", `Runtime Pass ${loop + 1}`, runtimeEdit, runtimeEdit.markdown);
+
+    const targets = resolveRuntimeTargets({ brief, diagnosis, blueprint });
+    const honesty = evaluateRuntimeHonesty(runtimeEdit.markdown, {
+      targetSeconds: targets.targetSeconds,
+      wordBudget: targets.wordBudget,
+      modelStatus: runtimeEdit.status,
+      modelRevisedVoWords: runtimeEdit.revisedVoWords
+    });
+
+    if (honesty.errors.length > 0 && loop < loops) {
+      const trim = `Runtime gate failed: ${honesty.errors.join(" ")} Cut the script to fit a word budget of ${targets.wordBudget} VO words. Trim weak transitions and redundant beats first. Keep the visual motif, structure, and direction intact.`;
+      await repository.event(job.id, STAGES.RUNTIME, `Over hard ceiling on loop ${loop + 1}. Forcing one writer trim.`, "warn", { kind: "runtime_gate_revision", loop: loop + 1, errors: honesty.errors });
+      draft = await withStageMetrics({
+        modelClient, repository, jobId: job.id, totals, maxCostUsd,
+        stage: STAGES.REVISION, agentName: "writer",
+        run: async () => {
+          const out = await runWriter({
+            modelClient,
+            references: `${await loadReferencePack(rootDir, ["voice", "format"])}${formatExamplesForAgent(relevantExamples, "writer")}`,
+            brief, diagnosis, mined, strategy, blueprint, visualInventory,
+            currentDraft: draft,
+            runtimeEdit,
+            critique: { passes: false, score: 0, findings: [`Runtime gate: ${honesty.errors.join(" ")}`], requiredRevisions: [trim] }
+          });
+          validateDraft(out);
+          return out;
+        }
+      });
+      await repository.artifact(job.id, "revision", `Revision ${loop + 1}`, draft, draft.markdown);
+      continue;
+    }
+
+    await repository.event(
+      job.id, STAGES.RUNTIME,
+      honesty.warnings.length > 0 ? `Deterministic runtime check: ${honesty.warnings.length} warning(s).` : (honesty.errors.length === 0 ? "Deterministic runtime check: OK." : "Deterministic runtime check: over budget after trim, delivering best draft."),
+      honesty.warnings.length > 0 || honesty.errors.length > 0 ? "warn" : "info",
+      { kind: "runtime_gate", loop: loop + 1, warnings: honesty.warnings, errors: honesty.errors, metrics: honesty.metrics }
+    );
+    break;
+  }
+
+  // 6. Producer notes (first-class deliverable) + final formatting.
+  await repository.updateJob(job.id, { current_stage: STAGES.FINAL });
+  await repository.event(job.id, STAGES.FINAL, "Formatting final script and producer notes.");
+  const critique = { passes: true, score: 0, findings: ["Production Package mode: critic skipped; runtime gate enforced."], requiredRevisions: [] };
+  const final = await withStageMetrics({
+    modelClient, repository, jobId: job.id, totals, maxCostUsd,
+    stage: STAGES.FINAL, agentName: "formatter",
+    run: async () => {
+      const out = await runFormatter({
+        modelClient,
+        references: await loadReferencePack(rootDir, ["format", "production"]),
+        brief, diagnosis, mined, blueprint, draft, runtimeEdit, critique
+      });
+      validateFormatted(out);
+      return out;
+    }
+  });
+  const preparedFinal = prepareFinalArtifacts({ formatted: final, runtimeEdit, draft, critique });
+
+  await repository.artifact(job.id, "client_script", "Client Script", preparedFinal, preparedFinal.clientScriptMarkdown);
+  await repository.artifact(job.id, "producer_notes", "Producer Notes", preparedFinal, preparedFinal.producerNotesMarkdown);
+  await repository.artifact(job.id, "final_script", "Final Script", preparedFinal, preparedFinal.clientScriptMarkdown);
+
+  await repository.updateJob(job.id, {
+    status: STATUS.COMPLETE,
+    current_stage: STAGES.FINAL,
+    completed_at: new Date().toISOString(),
+    total_input_tokens: totals.inputTokens,
+    total_output_tokens: totals.outputTokens,
+    total_cost_usd: Number(totals.costUsd.toFixed(6)),
+    model_name: totals.modelName
+  });
+  await repository.event(job.id, STAGES.FINAL, formatTotalsMessage(totals), "info", {
+    kind: "workflow_totals",
+    total_input_tokens: totals.inputTokens,
+    total_output_tokens: totals.outputTokens,
+    total_cost_usd: Number(totals.costUsd.toFixed(6)),
+    model_name: totals.modelName,
+    stages: totals.stages,
+    unpriced_stages: totals.unpricedStages
+  });
+  await repository.event(job.id, STAGES.FINAL, "Workflow complete.", "info", { kind: "workflow_complete" });
+
+  return { status: STATUS.COMPLETE, diagnosis, mined, visualInventory, strategy, blueprint, draft, runtimeEdit, critique, final: preparedFinal, totals };
+}
+
 function formatTotalsMessage(totals) {
   const tokens = totals.inputTokens + totals.outputTokens;
   if (totals.unpricedStages > 0 && totals.costUsd === 0) {
@@ -834,14 +1043,19 @@ function resolveWorkflowMode(value) {
   if (mode === WORKFLOW_MODES.FIRST_DRAFT || mode === "fast" || mode === "draft") {
     return WORKFLOW_MODES.FIRST_DRAFT;
   }
-  if (mode === WORKFLOW_MODES.FULL_PRODUCER || mode === "full" || mode === "producer") {
+  if (mode === WORKFLOW_MODES.PRODUCTION || mode === "package" || mode === "production_package") {
+    return WORKFLOW_MODES.PRODUCTION;
+  }
+  if (mode === WORKFLOW_MODES.FULL_PRODUCER || mode === "full" || mode === "producer" || mode === "deep") {
     return WORKFLOW_MODES.FULL_PRODUCER;
   }
   return WORKFLOW_MODES.FULL_PRODUCER;
 }
 
 function workflowModeLabel(mode) {
-  return mode === WORKFLOW_MODES.FIRST_DRAFT ? "First Draft" : "Full Producer";
+  if (mode === WORKFLOW_MODES.FIRST_DRAFT) return "First Draft";
+  if (mode === WORKFLOW_MODES.PRODUCTION) return "Production Package";
+  return "Full Producer";
 }
 
 function buildFirstDraftStrategy({ diagnosis, mined }) {
