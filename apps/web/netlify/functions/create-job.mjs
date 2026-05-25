@@ -39,8 +39,9 @@ function normalizeBrief(body) {
 function normalizeWorkflowMode(value) {
   const mode = String(value || "").trim().toLowerCase();
   if (mode === "first_draft" || mode === "fast" || mode === "draft") return "first_draft";
-  if (mode === "full_producer" || mode === "full" || mode === "producer") return "full_producer";
-  return "first_draft";
+  if (mode === "production" || mode === "package" || mode === "production_package") return "production";
+  if (mode === "full_producer" || mode === "full" || mode === "producer" || mode === "deep") return "full_producer";
+  return "production";
 }
 
 export const config = {
