@@ -12,6 +12,75 @@ export function createMockModelClient() {
       const tone = inferTone(briefText);
 
       switch (agentName) {
+        case "planner":
+          return {
+            diagnosis: {
+              format: inferFormat(briefText),
+              placement: inferPlacement(briefText),
+              audience: inferAudience(briefText),
+              understand: "The audience must understand what changed, why it matters, and what action it should create.",
+              feel: "Clear-eyed confidence, not generic inspiration.",
+              do: "Believe the idea is useful, produceable, and worth acting on.",
+              runtimeSeconds,
+              tone,
+              approvalReality: "Claims, metrics, brand lines, likenesses, and archival footage require approval.",
+              existingAssets: "TBD: existing assets are not fully specified in this mock run.",
+              openingTension: inferOpeningTension(briefText),
+              closingMove: "Return to the visual motif in its resolved form and land the required action.",
+              endFeeling: "Convinced and ready to move.",
+              assumptions: ["Mock planner run; all metrics treated as client-supplied."],
+              risks: ["The script must not invent footage access.", "Runtime must match the number of required ideas."]
+            },
+            mined: {
+              humanTension: inferOpeningTension(briefText),
+              metrics: extractMetrics(briefText),
+              strategicFrameworks: extractFrameworks(briefText),
+              brandLanguage: extractBrandLanguage(briefText),
+              assetNotes: extractAssetNotes(briefText),
+              clearanceFlags: ["Verify all claims, UI screenshots, logos, archival footage, and brand lines."],
+              usableAmmunition: ["Use data as pivots, not as a list.", "Make the audience friction visible before naming the solution."]
+            },
+            strategy: {
+              needsDirectionChoice: false,
+              recommendedDirectionId: "direction-1",
+              directions: [
+                {
+                  id: "direction-1",
+                  name: "From Friction To Flow",
+                  coreEngine: "Problem / Solution / Scale",
+                  whatMakesItWork: "It opens on the specific drag in the current state, then makes the solution feel like a visible release.",
+                  mainRisk: "If the opening friction stays generic, the whole film turns into a feature list.",
+                  whyItFits: "The brief needs clarity, proof, and a produceable visual structure."
+                }
+              ],
+              storyArc: {
+                act1: "The current state costs time, attention, or belief.",
+                act2: "The new system or idea changes the behavior on screen.",
+                act3: "The audience sees the clearer future and the action required."
+              }
+            },
+            blueprint: {
+              title: `${client} Script`,
+              client,
+              runtimeSeconds,
+              tone,
+              conceptEngine: "Problem / Solution / Scale",
+              visualMotif: "A cluttered signal line cleans itself into one precise pulse, then expands into a usable system.",
+              structure: [
+                { tc: "0:00-0:12", job: "Create felt friction.", transition: "Overlapping windows collapse into one moving line.", assetIds: [] },
+                { tc: "0:12-0:38", job: "Reveal the change.", transition: "The line becomes the interface or core visual device.", assetIds: [] },
+                { tc: "0:38-0:65", job: "Prove usefulness.", transition: "Data points travel through the motif instead of appearing as static supers.", assetIds: [] },
+                { tc: "0:65-end", job: "Land action and confidence.", transition: "The motif resolves into the final lockup.", assetIds: [] }
+              ],
+              openingMove: "Start with a recognizable behavior, not a brand claim.",
+              closingMove: "The motif resolves into one clean frame with the final action.",
+              productionNotes: [
+                "Use existing UI, campaign, or archival assets wherever the brief promises them.",
+                "Flag any new footage as to-shoot and any claims as approval-required."
+              ],
+              wordBudget: Math.round(runtimeSeconds * 1.45)
+            }
+          };
         case "diagnoser":
           return {
             format: inferFormat(briefText),

@@ -161,3 +161,22 @@ export function validateFormatted(data) {
   assert(parseThreeColumnScriptTable(data.clientScriptMarkdown).ok, `${label}: clientScriptMarkdown must include a three-column script table`);
   assert(!/^\s*#{0,3}\s*producer notes\b/im.test(data.clientScriptMarkdown), `${label}: clientScriptMarkdown must not include producer notes`);
 }
+
+export function validatePlan(data) {
+  const label = "planner contract";
+  assert(data && typeof data === "object" && !Array.isArray(data), `${label}: root must be an object`);
+  assert(data.diagnosis && typeof data.diagnosis === "object", `${label}: diagnosis sub-object required`);
+  assert(data.mined && typeof data.mined === "object", `${label}: mined sub-object required`);
+  assert(data.strategy && typeof data.strategy === "object", `${label}: strategy sub-object required`);
+  assert(data.blueprint && typeof data.blueprint === "object", `${label}: blueprint sub-object required`);
+
+  // Reuse the existing per-stage validators so the lean Planner output is held
+  // to exactly the same contract the four separate stages were.
+  validateDiagnosis(data.diagnosis);
+  validateMined(data.mined);
+  validateStrategy(data.strategy);
+  validateBlueprint(data.blueprint);
+
+  // Production mode must not pause for a direction.
+  assert(data.strategy.needsDirectionChoice === false, `${label}: strategy.needsDirectionChoice must be false in lean planning`);
+}
