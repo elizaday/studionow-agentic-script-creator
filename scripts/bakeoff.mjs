@@ -78,15 +78,25 @@ for (const briefId of briefIds) {
     let status = "complete";
     let result;
     try {
-      result = await runStudioNowWorkflow({ rootDir: ROOT, modelClient, job, repository, maxRevisionLoops: 1 });
+      result = await runStudioNowWorkflow({ rootDir: ROOT, modelClient, job, repository, maxRevisionLoops: 1, autoSelectDirection: true });
     } catch (err) {
       status = "failed";
       result = { error: err.message };
     }
     const elapsed = Math.round((Date.now() - started) / 1000);
 
-    const script = result?.final?.clientScriptMarkdown || result?.final?.finalMarkdown || `(${status}: ${result?.error || "no output"})`;
+    const script = result?.final?.clientScriptMarkdown || result?.final?.finalMarkdown || "";
     const notes = result?.final?.producerNotesMarkdown || "";
+
+    // Only treat a run as done if it actually produced a script. A paused
+    // (waiting_for_direction) or failed run must NOT write script.md, or the
+    // resumable check would skip it forever. Leave the folder empty so a
+    // re-run retries it.
+    if (result?.status !== "complete" || !script.trim()) {
+      console.log(`  ! ${code}  ${briefId} / ${arm}  -> ${result?.status || status} with no script in ${elapsed}s. Will retry on next run.`);
+      continue;
+    }
+
     await writeFile(resolve(dir, "script.md"), script);
     if (notes) await writeFile(resolve(dir, "producer-notes.md"), notes);
 

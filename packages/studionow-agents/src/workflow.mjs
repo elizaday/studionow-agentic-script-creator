@@ -40,7 +40,8 @@ export async function runStudioNowWorkflow({
   job,
   repository,
   maxRevisionLoops = 1,
-  maxCostUsd = Number(process.env.MAX_JOB_COST_USD || 2)
+  maxCostUsd = Number(process.env.MAX_JOB_COST_USD || 2),
+  autoSelectDirection = false
 }) {
   const rawBrief = normalizeBrief(job.brief);
   const workflowMode = resolveWorkflowMode(rawBrief.workflowMode || job.workflow_mode);
@@ -263,12 +264,22 @@ export async function runStudioNowWorkflow({
   }
 
   if (!isFirstDraftMode && strategy.needsDirectionChoice && !job.selected_direction_id) {
-    await repository.updateJob(job.id, {
-      status: STATUS.WAITING_FOR_DIRECTION,
-      current_stage: STAGES.STRATEGY
-    });
-    await repository.event(job.id, STAGES.STRATEGY, "Waiting for user to select a concept direction.");
-    return { status: STATUS.WAITING_FOR_DIRECTION, diagnosis, mined, strategy };
+    if (autoSelectDirection && Array.isArray(strategy.directions) && strategy.directions.length > 0) {
+      const pick = strategy.recommendedDirectionId || strategy.directions[0].id;
+      strategy = applySelectedDirection(strategy, pick);
+      await repository.event(job.id, STAGES.STRATEGY, `Auto-selected direction "${strategy.recommendedDirectionId}" (no human in the loop).`, "info", {
+        kind: "auto_selected_direction",
+        applied_direction_id: strategy.recommendedDirectionId
+      });
+      await repository.artifact(job.id, "strategy", "Concept Strategy", strategy);
+    } else {
+      await repository.updateJob(job.id, {
+        status: STATUS.WAITING_FOR_DIRECTION,
+        current_stage: STAGES.STRATEGY
+      });
+      await repository.event(job.id, STAGES.STRATEGY, "Waiting for user to select a concept direction.");
+      return { status: STATUS.WAITING_FOR_DIRECTION, diagnosis, mined, strategy };
+    }
   }
 
   await repository.updateJob(job.id, { current_stage: STAGES.BLUEPRINT });
