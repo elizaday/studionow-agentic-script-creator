@@ -12,6 +12,21 @@ export function createMockModelClient() {
       const tone = inferTone(briefText);
 
       switch (agentName) {
+        case "visual_intake":
+          return {
+            inventory: (payload?.imageManifest || []).map((image) => ({
+              id: image.id,
+              source: image.source || image.filename || image.id,
+              shotType: "mixed",
+              description: "Mock visual asset with readable production value.",
+              containsText: false,
+              textContent: "",
+              usableFor: ["existing-asset", "transition"],
+              sensitivity: "client-supplied",
+              notes: "Mock visual intake."
+            })),
+            notes: "Mock visual intake complete."
+          };
         case "planner":
           return {
             diagnosis: {
@@ -81,6 +96,22 @@ export function createMockModelClient() {
               wordBudget: Math.round(runtimeSeconds * 1.45)
             }
           };
+        case "writer_producer": {
+          const assetId = payload?.visualInventory?.inventory?.[0]?.id;
+          const assetPrefix = assetId ? `[${assetId}] ` : "";
+          const clientScriptMarkdown = `# ${client.toUpperCase()} AGENTIC DRAFT\nClient: ${client}\nWriter: StudioNow AI Agent Workflow\nDate: ${new Date().toLocaleDateString("en-US")}\nVersion: 1\n\n| AUDIO/VO | TC | VISUALS |\n|---|---:|---|\n| Three tools. Three exports. One team trying to answer one question. | 0:00-0:08 | ${assetPrefix}(existing footage / motion graphics) Browser tabs stack over each other. CSV files slide across the frame until they jam the screen. |\n| But the work has changed. The view has to change with it. | 0:08-0:15 | (motion graphics) The clutter pulls into one moving signal line. It sharpens into a clean interface frame. |\n| One view. One rhythm. One smarter way forward. | 0:15-0:30 | (motion graphics) The signal resolves into the final product or initiative lockup. *SFX: soft pulse lock.* |`;
+          return {
+            metadata: {
+              title: `${client.toUpperCase()} AGENTIC DRAFT`,
+              client,
+              writer: "StudioNow AI Agent Workflow",
+              version: 1
+            },
+            voWordCount: 28,
+            clientScriptMarkdown,
+            producerNotesMarkdown: `# PRODUCER NOTES\n\n## Asset Sourcing Matrix\n| TC | Asset | Source | Status | Notes |\n|---|---|---|---|---|\n| 0:00-0:08 | Opening visual | Existing / motion graphics | Needs review | Confirm client-supplied asset rights. |\n\n## Approval Flags\n- Confirm all claims and visuals.\n\n## Missing Assets\n- None identified in mock run.\n\n## Graphics/Animation Load\n- Light to medium.\n\n## Music Direction\n- Clean pulse, restrained momentum.\n\n## Timeline/Feasibility Notes\n- Mock producer notes only.`
+          };
+        }
         case "diagnoser":
           return {
             format: inferFormat(briefText),

@@ -18,7 +18,7 @@ export default async function handler(req) {
     const supabase = getSupabaseClient({ service: true });
     const [{ data: job, error: jobError }, { data: artifacts, error: artifactsError }] = await Promise.all([
       supabase.from("script_jobs").select("id,brief").eq("id", id).single(),
-      supabase.from("script_artifacts").select("type,markdown").eq("job_id", id)
+      supabase.from("script_artifacts").select("type,markdown,content").eq("job_id", id).order("created_at", { ascending: true })
     ]);
 
     if (jobError) throw jobError;
@@ -33,8 +33,9 @@ export default async function handler(req) {
     }
 
     const titleBase = job?.brief?.name || "StudioNow Deliverable";
+    const visualAssets = [...artifacts].reverse().find((entry) => entry.type === "visual_assets")?.content?.assets || [];
     const buffer = kind === "script"
-      ? await buildScriptDocx({ title: `${titleBase} Script`, markdown: artifact.markdown })
+      ? await buildScriptDocx({ title: `${titleBase} Script`, markdown: artifact.markdown, assets: visualAssets })
       : await buildProducerNotesDocx({ title: `${titleBase} Producer Notes`, markdown: artifact.markdown });
 
     const fileName = `${slugify(titleBase)}-${kind === "script" ? "script" : "producer-notes"}.docx`;

@@ -79,7 +79,7 @@ for (const attachPath of attachArgs) {
   } else if (IMAGE_EXTS[ext]) {
     const buf = await readFile(resolvedAttach);
     attachments.push({
-      id: `asset-${assetCounter}`,
+      id: `Asset ${assetCounter}`,
       source: basename(resolvedAttach),
       filename: basename(resolvedAttach),
       mediaType: IMAGE_EXTS[ext],
@@ -137,7 +137,7 @@ await writeFile(resolve(outputDir, id, "summary.json"), JSON.stringify(summary, 
 const clientMd = result.final?.clientScriptMarkdown || result.final?.finalMarkdown || "";
 const notesMd = result.final?.producerNotesMarkdown || "";
 if (clientMd) {
-  const clientDocx = await buildScriptDocx({ title: `${name} — Script`, markdown: clientMd });
+  const clientDocx = await buildScriptDocx({ title: `${name} — Script`, markdown: clientMd, assets: attachments });
   await writeFile(resolve(outputDir, id, "client_script.docx"), clientDocx);
 }
 if (notesMd) {

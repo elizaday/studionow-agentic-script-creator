@@ -35,7 +35,7 @@ export async function runWriterProducer({
     : `\n\nThis appears to be a text-on-screen / supers-only piece. The AUDIO/VO column should contain music cues, SFX, and SUPER directions, not spoken VO.`;
 
   const inventoryClause = hasInventory
-    ? `\n- A visualInventory is attached in the payload. When a row uses an existing asset, reference it inline in the VISUALS cell using [asset-id] followed by a brief description. Example: "[asset-3] (existing) Wide shot of bottling line, camera dollies right." For new footage, use (to-shoot), (motion graphics), or (stock). Never reference an asset id not in the inventory.`
+    ? `\n- A visualInventory is attached in the payload. When a row uses an existing asset, reference it inline in the VISUALS cell using [Asset N] followed by a brief description. Example: "[Asset 3] (existing) Wide shot of bottling line, camera dollies right." Use the asset id exactly as it appears in the inventory. For new footage, use (to-shoot), (motion graphics), or (stock). Never reference an asset id not in the inventory.`
     : "";
 
   const system = baseSystem({ role: "Script Writer and Producer", references });

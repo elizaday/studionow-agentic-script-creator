@@ -141,6 +141,12 @@ export async function runStudioNowWorkflow({
   const imageAttachments = collectImageAttachments(rawAttachments);
   const visualCandidateCount = countVisualCandidates(rawAttachments);
   let visualInventory = { inventory: [], notes: "" };
+  const visualAssets = buildVisualAssetManifest(imageAttachments);
+  if (visualAssets.length > 0) {
+    await repository.artifact(job.id, "visual_assets", "Visual Assets", {
+      assets: visualAssets
+    });
+  }
   if (visualCandidateCount > 0 && isFirstDraftMode) {
     await repository.event(
       job.id,
@@ -605,6 +611,12 @@ async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository
   // 1. Optional visual intake (only when images/decks are attached).
   const imageAttachments = collectImageAttachments(rawAttachments);
   let visualInventory = { inventory: [], notes: "" };
+  const visualAssets = buildVisualAssetManifest(imageAttachments);
+  if (visualAssets.length > 0) {
+    await repository.artifact(job.id, "visual_assets", "Visual Assets", {
+      assets: visualAssets
+    });
+  }
   if (imageAttachments.length > 0) {
     await repository.updateJob(job.id, { current_stage: STAGES.VISUAL_INTAKE });
     await repository.event(job.id, STAGES.VISUAL_INTAKE, `Running visual intake on ${imageAttachments.length} attached image(s).`);
@@ -949,6 +961,25 @@ function collectImageAttachments(attachments) {
     });
   }
   return out;
+}
+
+function buildVisualAssetManifest(imageAttachments) {
+  if (!Array.isArray(imageAttachments) || imageAttachments.length === 0) return [];
+  const maxAssets = Number(process.env.MAX_VISUAL_ASSET_THUMBNAILS || 40);
+  const maxBase64Chars = Number(process.env.MAX_VISUAL_ASSET_BASE64_CHARS || 1200000);
+  return imageAttachments.slice(0, maxAssets).map((image) => {
+    const data = typeof image.base64 === "string" && image.base64.length <= maxBase64Chars
+      ? image.base64
+      : null;
+    return {
+      id: image.id,
+      source: image.source || image.filename || image.id,
+      filename: image.filename || null,
+      mediaType: image.mediaType || "image/jpeg",
+      data,
+      omitted: data ? false : true
+    };
+  });
 }
 
 function countVisualCandidates(attachments) {

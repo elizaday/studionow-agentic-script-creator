@@ -441,6 +441,29 @@
     .script-content em { font-style: italic; color: var(--med); }
     .script-content ul, .script-content ol { margin: 8px 0 8px 24px; }
     .script-content li { margin-bottom: 4px; }
+    .asset-ref {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      vertical-align: middle;
+      margin-right: 4px;
+      padding: 3px 6px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--med);
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .asset-thumb {
+      width: 72px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
 
     .review-section {
       background: var(--white); border: 1px solid var(--border);
@@ -861,6 +884,7 @@
     let uploadedFiles = [];
     let activeJobId = null;
     let pollTimer = null;
+    let activeVisualAssets = [];
 
     // ==================== INIT ====================
     document.getElementById("projectDate").value = formatToday();
@@ -1252,6 +1276,7 @@
       const script = artifacts?.find((a) => a.type === "client_script")
         || artifacts?.find((a) => a.type === "final_script");
       const notes = artifacts?.find((a) => a.type === "producer_notes");
+      activeVisualAssets = latestArtifact(artifacts, "visual_assets")?.content?.assets || [];
       const scriptOutput = document.getElementById("scriptOutput");
       const notesOutput = document.getElementById("notesOutput");
       if (script?.markdown) {
@@ -1348,9 +1373,22 @@
       return html;
     }
     function inline(text) {
-      return escapeHtml(text)
+      return replaceAssetRefs(escapeHtml(text)
         .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/(?:^|[^*])\*([^*]+)\*/g, (m, p1) => m.replace(`*${p1}*`, `<em>${p1}</em>`));
+        .replace(/(?:^|[^*])\*([^*]+)\*/g, (m, p1) => m.replace(`*${p1}*`, `<em>${p1}</em>`)));
+    }
+    function replaceAssetRefs(html) {
+      if (!activeVisualAssets?.length) return html;
+      return html.replace(/\[Asset\s+(\d+)\]/g, (match, num) => {
+        const asset = activeVisualAssets.find((a) => normalizeAssetId(a.id) === `Asset ${num}`);
+        if (!asset || !asset.data) return `<span class="asset-ref">${escapeHtml(match)}</span>`;
+        const title = escapeHtml(asset.source || asset.filename || match);
+        return `<span class="asset-ref" title="${title}"><img src="data:${escapeHtml(asset.mediaType || "image/jpeg")};base64,${asset.data}" class="asset-thumb" alt="${escapeHtml(match)}"><span>${escapeHtml(match)}</span></span>`;
+      });
+    }
+    function normalizeAssetId(value) {
+      const match = String(value || "").match(/Asset\s+(\d+)/i);
+      return match ? `Asset ${match[1]}` : String(value || "").trim();
     }
     function escapeHtml(v) {
       return String(v)
