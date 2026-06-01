@@ -1,4 +1,5 @@
 import { getSupabaseClient, jsonResponse } from "./_supabase.mjs";
+import { buildGoldImprovement, insertDraftLearningRules } from "./_self_improve.mjs";
 
 /**
  * POST /api/jobs/approve-gold
@@ -29,18 +30,11 @@ export default async function handler(req) {
     if (!candidate) throw new Error("Gold candidate not found");
     if (candidate.status === "ingested") throw new Error("Already ingested");
 
-    // 2. Build the example row
+    // 2. Build the improved example row
     const projectName = candidate.project_name || "Gold Example";
-    const tags = Array.isArray(candidate.tags) && candidate.tags.length > 0
-      ? [...new Set([...candidate.tags, "gold", "human-edited"])]
-      : ["gold", "human-edited"];
-    const teachingPoints = Array.isArray(candidate.teaching_points) && candidate.teaching_points.length > 0
-      ? candidate.teaching_points
-      : [candidate.why_gold, candidate.what_changed].filter(Boolean);
     const scriptText = candidate.final_script_text || "";
-    const scriptExcerpt = scriptText.slice(0, 2000);
     const briefText = candidate.brief_text || "";
-    const retrievalText = [projectName, briefText.slice(0, 500), tags.join(" "), scriptExcerpt.slice(0, 500)].join("\n");
+    const improvement = buildGoldImprovement(candidate);
 
     // 3. Insert into script_examples
     const { data: example, error: insertErr } = await supabase
@@ -52,13 +46,16 @@ export default async function handler(req) {
         source_kind: "gold-candidate",
         pairing_confidence: "high",
         pairing_type: "brief-to-edited-script",
-        tags,
+        tags: improvement.tags,
         brief_text: briefText,
         script_text: scriptText,
-        script_excerpt: scriptExcerpt,
-        retrieval_text: retrievalText,
-        teaching_points: teachingPoints.length > 0 ? teachingPoints : ["Human-approved gold standard."],
-        notes: `Promoted from gold candidate ${candidateId}. Reviewer: ${candidate.reviewer_name || body.reviewerName || "unknown"}.`,
+        script_excerpt: improvement.scriptExcerpt,
+        retrieval_text: improvement.retrievalText,
+        teaching_points: improvement.teachingPoints,
+        notes: [
+          `Promoted from gold candidate ${candidateId}. Reviewer: ${candidate.reviewer_name || body.reviewerName || "unknown"}.`,
+          improvement.memoryCard
+        ].filter(Boolean).join("\n\n"),
         source_gold_candidate_id: candidateId,
         status: "active"
       })
@@ -66,7 +63,16 @@ export default async function handler(req) {
       .single();
     if (insertErr) throw insertErr;
 
-    // 4. Update gold candidate status
+    // 4. Propose draft learning rules from the approved gold pair.
+    // Draft status is intentional: Mike can promote durable rules to active.
+    const draftRules = await insertDraftLearningRules({
+      supabase,
+      rules: improvement.proposedRules,
+      candidateId,
+      exampleId: example.id
+    });
+
+    // 5. Update gold candidate status
     const { error: updateErr } = await supabase
       .from("script_gold_candidates")
       .update({
@@ -78,21 +84,32 @@ export default async function handler(req) {
       .eq("id", candidateId);
     if (updateErr) throw updateErr;
 
-    // 5. Log the event on the parent job if present
+    // 6. Log the event on the parent job if present
     if (candidate.job_id) {
       await supabase.from("script_job_events").insert({
         job_id: candidate.job_id,
         stage: "gold_ingestion",
         level: "info",
-        message: `Gold candidate approved and ingested as example ${example.id}. It will be available to the agent on the next run.`,
-        payload: { gold_candidate_id: candidateId, example_id: example.id }
+        message: `Gold candidate approved and ingested as example ${example.id}. Proposed ${draftRules.length} draft learning rule(s).`,
+        payload: {
+          gold_candidate_id: candidateId,
+          example_id: example.id,
+          tags: improvement.tags,
+          teaching_points: improvement.teachingPoints,
+          draft_learning_rule_ids: draftRules.map((rule) => rule.id)
+        }
       });
     }
 
     return jsonResponse({
       ok: true,
       exampleId: example.id,
-      message: "Gold candidate approved and ingested. The agent will use it on the next script."
+      tags: improvement.tags,
+      teachingPoints: improvement.teachingPoints,
+      draftLearningRules: draftRules,
+      message: draftRules.length > 0
+        ? "Gold candidate approved, ingested, and draft learning rules proposed. The example is available on the next script."
+        : "Gold candidate approved and ingested. The example is available on the next script."
     });
   } catch (error) {
     return jsonResponse({ error: error.message || "Could not approve gold candidate" }, 500);
