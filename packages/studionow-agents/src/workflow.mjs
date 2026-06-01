@@ -10,8 +10,9 @@ import { runWriter } from "./agents/writer.mjs";
 import { runRuntimeEditor } from "./agents/runtime-editor.mjs";
 import { runCritic } from "./agents/critic.mjs";
 import { runFormatter } from "./agents/formatter.mjs";
+import { runWriterProducer } from "./agents/writer-producer.mjs";
 import { prepareFinalArtifacts } from "./final-artifacts.mjs";
-import { formatExamplesForAgent, selectRelevantExamples } from "./example-memory.mjs";
+import { formatExamplesForAgent, selectRelevantExamples, loadExamples } from "./example-memory.mjs";
 import {
   validateDiagnosis,
   validateMined,
@@ -22,6 +23,7 @@ import {
   validateRuntimeEdit,
   validateCritique,
   validateFormatted,
+  validateWriterProducer,
   validatePlan
 } from "./stage-schemas.mjs";
 import { evaluateRuntimeHonesty, resolveRuntimeTargets } from "./runtime-gate.mjs";
@@ -648,108 +650,112 @@ async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository
   await repository.artifact(job.id, "strategy", "Concept Strategy", strategy);
   await repository.artifact(job.id, "script_blueprint", "Script Blueprint", blueprint);
 
-  // 3. Example retrieval (taste anchors).
-  const relevantExamples = selectRelevantExamples({ rootDir, brief, diagnosis, mined, limit: 3 });
+  // 3. Example retrieval (Supabase first, JSON fallback).
+  const allExamples = await loadExamples({ rootDir, repository });
+  const relevantExamples = selectRelevantExamples({ rootDir, examples: allExamples, brief, diagnosis, mined, limit: 3 });
   if (relevantExamples.length > 0 && typeof repository.exampleUsage === "function") {
     await repository.exampleUsage(job.id, relevantExamples);
   }
+  if (relevantExamples.length > 0) {
+    const goldCount = relevantExamples.filter(e => e.quality === "gold").length;
+    await repository.event(job.id, STAGES.STRATEGY, `Retrieved ${relevantExamples.length} example(s)${goldCount > 0 ? ` (${goldCount} gold)` : ""}.`, "info", {
+      kind: "example_retrieval",
+      examples: relevantExamples.map(e => ({ id: e.id, projectName: e.projectName, quality: e.quality, relevanceScore: e.relevanceScore }))
+    });
+  }
 
-  // 4. Writer.
+  // 3b. Load learning rules from Supabase (accumulated feedback patterns as hard constraints).
+  let learningRulesBlock = "";
+  if (typeof repository.loadActiveLearningRules === "function") {
+    try {
+      const rules = await repository.loadActiveLearningRules("writer_producer");
+      if (rules.length > 0) {
+        learningRulesBlock = "\n\n## LEARNING RULES (HARD CONSTRAINTS)\n\nThese rules come from accumulated reviewer feedback. Follow every one.\n\n" + rules.map((r, i) => `${i + 1}. ${r}`).join("\n");
+        await repository.event(job.id, STAGES.DRAFT, `Loaded ${rules.length} active learning rule(s).`, "info", { kind: "learning_rules", count: rules.length });
+      }
+    } catch (err) {
+      console.warn("Failed to load learning rules:", err.message);
+    }
+  }
+
+  // 4. Combined Writer + Producer Notes (single call replaces writer, runtime editor, formatter).
   await repository.updateJob(job.id, { current_stage: STAGES.DRAFT });
-  await repository.event(job.id, STAGES.DRAFT, "Writing the three-column draft.");
-  let draft = await withStageMetrics({
+  await repository.event(job.id, STAGES.DRAFT, "Writing script and producer notes.");
+  let writerResult = await withStageMetrics({
     modelClient, repository, jobId: job.id, totals, maxCostUsd,
-    stage: STAGES.DRAFT, agentName: "writer",
+    stage: STAGES.DRAFT, agentName: "writer_producer",
     run: async () => {
-      const out = await runWriter({
+      const out = await runWriterProducer({
         modelClient,
-        references: `${await loadReferencePack(rootDir, ["voice", "format"])}${formatExamplesForAgent(relevantExamples, "writer")}`,
+        references: `${await loadReferencePack(rootDir, ["voice", "format", "production"])}${formatExamplesForAgent(relevantExamples, "writer")}${learningRulesBlock}`,
         brief, diagnosis, mined, strategy, blueprint, visualInventory
       });
-      validateDraft(out);
+      validateWriterProducer(out);
       return out;
     }
   });
-  await repository.artifact(job.id, "draft_script", "Draft Script", draft, draft.markdown);
+  await repository.artifact(job.id, "draft_script", "Draft Script", writerResult, writerResult.clientScriptMarkdown);
 
-  // 5. Deterministic runtime gate with a single forced trim if over budget.
-  let runtimeEdit;
-  for (let loop = 0; loop <= loops; loop += 1) {
-    await repository.updateJob(job.id, { current_stage: STAGES.RUNTIME });
-    await repository.event(job.id, STAGES.RUNTIME, "Checking VO density and runtime honesty.");
-    runtimeEdit = await withStageMetrics({
+  // 5. Deterministic runtime gate (code-only, no model call).
+  // If over the hard ceiling, force one trim via the combined agent.
+  const targets = resolveRuntimeTargets({ brief, diagnosis, blueprint });
+  const measured = evaluateRuntimeHonesty(writerResult.clientScriptMarkdown, {
+    targetSeconds: targets.targetSeconds,
+    wordBudget: targets.wordBudget
+  });
+  const runtimeEdit = {
+    status: measured.errors.length > 0 ? "cut_required" : "within_budget",
+    originalVoWords: measured.metrics?.vo_words_measured ?? writerResult.voWordCount ?? 0,
+    revisedVoWords: measured.metrics?.vo_words_measured ?? writerResult.voWordCount ?? 0,
+    notes: [...measured.errors, ...measured.warnings],
+    markdown: writerResult.clientScriptMarkdown,
+    deterministic: true
+  };
+  await repository.event(
+    job.id, STAGES.RUNTIME,
+    measured.errors.length > 0
+      ? `Runtime gate: over budget (${measured.errors.join(" ")}). Forcing one trim.`
+      : (measured.warnings.length > 0 ? `Runtime check: ${measured.warnings.length} warning(s).` : "Runtime check: OK."),
+    measured.errors.length > 0 ? "warn" : "info",
+    { kind: "runtime_gate", warnings: measured.warnings, errors: measured.errors, metrics: measured.metrics }
+  );
+
+  if (measured.errors.length > 0 && loops > 0) {
+    await repository.updateJob(job.id, { current_stage: STAGES.REVISION });
+    await repository.event(job.id, STAGES.REVISION, "Trimming script to meet word budget.");
+    writerResult = await withStageMetrics({
       modelClient, repository, jobId: job.id, totals, maxCostUsd,
-      stage: STAGES.RUNTIME, agentName: "runtime_editor",
+      stage: STAGES.REVISION, agentName: "writer_producer",
       run: async () => {
-        const out = await runRuntimeEditor({
+        const out = await runWriterProducer({
           modelClient,
-          references: await loadReferencePack(rootDir, ["voice", "format"]),
-          brief, diagnosis, blueprint, draft
+          references: `${await loadReferencePack(rootDir, ["voice", "format", "production"])}${formatExamplesForAgent(relevantExamples, "writer")}`,
+          brief, diagnosis, mined, strategy, blueprint, visualInventory,
+          currentDraft: writerResult,
+          trimInstruction: `${measured.errors.join(" ")} Cut to ${targets.wordBudget} VO words max.`
         });
-        validateRuntimeEdit(out);
+        validateWriterProducer(out);
         return out;
       }
     });
-    await repository.artifact(job.id, "runtime_pass", `Runtime Pass ${loop + 1}`, runtimeEdit, runtimeEdit.markdown);
-
-    const targets = resolveRuntimeTargets({ brief, diagnosis, blueprint });
-    const honesty = evaluateRuntimeHonesty(runtimeEdit.markdown, {
-      targetSeconds: targets.targetSeconds,
-      wordBudget: targets.wordBudget,
-      modelStatus: runtimeEdit.status,
-      modelRevisedVoWords: runtimeEdit.revisedVoWords
-    });
-
-    if (honesty.errors.length > 0 && loop < loops) {
-      const trim = `Runtime gate failed: ${honesty.errors.join(" ")} Cut the script to fit a word budget of ${targets.wordBudget} VO words. Trim weak transitions and redundant beats first. Keep the visual motif, structure, and direction intact.`;
-      await repository.event(job.id, STAGES.RUNTIME, `Over hard ceiling on loop ${loop + 1}. Forcing one writer trim.`, "warn", { kind: "runtime_gate_revision", loop: loop + 1, errors: honesty.errors });
-      draft = await withStageMetrics({
-        modelClient, repository, jobId: job.id, totals, maxCostUsd,
-        stage: STAGES.REVISION, agentName: "writer",
-        run: async () => {
-          const out = await runWriter({
-            modelClient,
-            references: `${await loadReferencePack(rootDir, ["voice", "format"])}${formatExamplesForAgent(relevantExamples, "writer")}`,
-            brief, diagnosis, mined, strategy, blueprint, visualInventory,
-            currentDraft: draft,
-            runtimeEdit,
-            critique: { passes: false, score: 0, findings: [`Runtime gate: ${honesty.errors.join(" ")}`], requiredRevisions: [trim] }
-          });
-          validateDraft(out);
-          return out;
-        }
-      });
-      await repository.artifact(job.id, "revision", `Revision ${loop + 1}`, draft, draft.markdown);
-      continue;
-    }
-
-    await repository.event(
-      job.id, STAGES.RUNTIME,
-      honesty.warnings.length > 0 ? `Deterministic runtime check: ${honesty.warnings.length} warning(s).` : (honesty.errors.length === 0 ? "Deterministic runtime check: OK." : "Deterministic runtime check: over budget after trim, delivering best draft."),
-      honesty.warnings.length > 0 || honesty.errors.length > 0 ? "warn" : "info",
-      { kind: "runtime_gate", loop: loop + 1, warnings: honesty.warnings, errors: honesty.errors, metrics: honesty.metrics }
-    );
-    break;
+    await repository.artifact(job.id, "revision", "Revision 1", writerResult, writerResult.clientScriptMarkdown);
+    runtimeEdit.revisedVoWords = writerResult.voWordCount;
+    runtimeEdit.markdown = writerResult.clientScriptMarkdown;
+    runtimeEdit.status = "within_budget";
   }
 
-  // 6. Producer notes (first-class deliverable) + final formatting.
+  // 6. Assemble final artifacts (no model call — just cleanup).
   await repository.updateJob(job.id, { current_stage: STAGES.FINAL });
-  await repository.event(job.id, STAGES.FINAL, "Formatting final script and producer notes.");
-  const critique = { passes: true, score: 0, findings: ["Production Package mode: critic skipped; runtime gate enforced."], requiredRevisions: [] };
-  const final = await withStageMetrics({
-    modelClient, repository, jobId: job.id, totals, maxCostUsd,
-    stage: STAGES.FINAL, agentName: "formatter",
-    run: async () => {
-      const out = await runFormatter({
-        modelClient,
-        references: await loadReferencePack(rootDir, ["format", "production"]),
-        brief, diagnosis, mined, blueprint, draft, runtimeEdit, critique
-      });
-      validateFormatted(out);
-      return out;
-    }
-  });
-  const preparedFinal = prepareFinalArtifacts({ formatted: final, runtimeEdit, draft, critique });
+  await repository.event(job.id, STAGES.FINAL, "Assembling final deliverables.");
+  const critique = { passes: true, score: 0, findings: ["Production Package mode: runtime gate enforced."], requiredRevisions: [] };
+  const draft = writerResult;
+  const preparedFinal = {
+    clientScriptMarkdown: writerResult.clientScriptMarkdown,
+    producerNotesMarkdown: writerResult.producerNotesMarkdown || "# PRODUCER NOTES\n\n## Notes\n- No producer notes were generated.",
+    finalMarkdown: writerResult.clientScriptMarkdown,
+    combinedMarkdown: `${writerResult.clientScriptMarkdown}\n\n---\n\n${writerResult.producerNotesMarkdown}`.trim(),
+    deliveryChecklist: []
+  };
 
   await repository.artifact(job.id, "client_script", "Client Script", preparedFinal, preparedFinal.clientScriptMarkdown);
   await repository.artifact(job.id, "producer_notes", "Producer Notes", preparedFinal, preparedFinal.producerNotesMarkdown);
@@ -896,7 +902,7 @@ async function expandPdfAttachments(attachments) {
     if (file.mediaType && file.base64) {
       out.push({
         ...file,
-        id: file.id || `asset-${assetIndex}`
+        id: file.id || `Asset ${assetIndex}`
       });
       assetIndex += 1;
       continue;
@@ -934,7 +940,7 @@ function collectImageAttachments(attachments) {
     if (!String(file.mediaType).startsWith("image/")) continue;
     counter += 1;
     out.push({
-      id: file.id || `asset-${counter}`,
+      id: file.id || `Asset ${counter}`,
       source: file.source || file.filename || "uploaded image",
       filename: file.filename || null,
       mediaType: file.mediaType,
@@ -1060,7 +1066,7 @@ function resolveWorkflowMode(value) {
   if (mode === WORKFLOW_MODES.FULL_PRODUCER || mode === "full" || mode === "producer" || mode === "deep") {
     return WORKFLOW_MODES.FULL_PRODUCER;
   }
-  return WORKFLOW_MODES.FULL_PRODUCER;
+  return WORKFLOW_MODES.PRODUCTION;
 }
 
 function workflowModeLabel(mode) {

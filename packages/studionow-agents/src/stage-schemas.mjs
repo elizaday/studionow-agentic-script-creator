@@ -162,6 +162,19 @@ export function validateFormatted(data) {
   assert(!/^\s*#{0,3}\s*producer notes\b/im.test(data.clientScriptMarkdown), `${label}: clientScriptMarkdown must not include producer notes`);
 }
 
+export function validateWriterProducer(data) {
+  const label = "writer_producer contract";
+  assert(data && typeof data === "object" && !Array.isArray(data), `${label}: root must be an object`);
+  assert(data.metadata && typeof data.metadata === "object", `${label}: metadata object required`);
+  assert(isNonEmptyString(data.metadata.title), `${label}: metadata.title required`);
+  assert(isNonEmptyString(data.metadata.client), `${label}: metadata.client required`);
+  assert(isFiniteNumber(data.voWordCount) && data.voWordCount >= 0, `${label}: voWordCount must be a non-negative number`);
+  assert(isNonEmptyString(data.clientScriptMarkdown), `${label}: clientScriptMarkdown required`);
+  assert(isNonEmptyString(data.producerNotesMarkdown), `${label}: producerNotesMarkdown required`);
+  assert(parseThreeColumnScriptTable(data.clientScriptMarkdown).ok, `${label}: clientScriptMarkdown must include a three-column script table`);
+  assert(!/^\s*#{0,3}\s*producer notes\b/im.test(data.clientScriptMarkdown), `${label}: clientScriptMarkdown must not include producer notes`);
+}
+
 export function validatePlan(data) {
   const label = "planner contract";
   assert(data && typeof data === "object" && !Array.isArray(data), `${label}: root must be an object`);

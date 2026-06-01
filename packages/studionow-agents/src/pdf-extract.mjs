@@ -49,7 +49,7 @@ export async function pdfToImageAttachments({
       const pageMatch = file.match(/-(\d+)\.jpg$/i);
       const pageNumber = pageMatch ? Number(pageMatch[1]) : assetIndex - startAssetIndex + 1;
       attachments.push({
-        id: `asset-${assetIndex}`,
+        id: `Asset ${assetIndex}`,
         source: filename ? `${filename} p.${pageNumber}` : `${source} p.${pageNumber}`,
         filename: file,
         mediaType: "image/jpeg",

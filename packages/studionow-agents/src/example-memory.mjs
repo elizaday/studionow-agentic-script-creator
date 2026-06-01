@@ -8,21 +8,54 @@ const STOPWORDS = new Set([
   "studio", "studionow", "usable", "example", "examples"
 ]);
 
-export function loadExampleMemory(rootDir) {
+// ---------------------------------------------------------------------------
+// Load examples: Supabase first, JSON file fallback
+// ---------------------------------------------------------------------------
+
+/**
+ * Load examples from Supabase via repository, falling back to the static
+ * JSON file if the repository method is not available or fails.
+ */
+export async function loadExamples({ rootDir, repository }) {
+  // Try Supabase first
+  if (repository && typeof repository.loadExamplesFromDb === "function") {
+    try {
+      const dbExamples = await repository.loadExamplesFromDb();
+      if (dbExamples.length > 0) return dbExamples;
+    } catch (err) {
+      console.warn("Failed to load examples from Supabase, falling back to JSON:", err.message);
+    }
+  }
+
+  // Fallback to static file
+  return loadExampleMemoryFromFile(rootDir);
+}
+
+export function loadExampleMemoryFromFile(rootDir) {
   const path = resolve(rootDir, "training", "processed", "example_memory.json");
   if (!existsSync(path)) return [];
   return JSON.parse(readFileSync(path, "utf-8"));
 }
 
+// Keep the old name as an alias for backward compatibility
+export const loadExampleMemory = loadExampleMemoryFromFile;
+
+// ---------------------------------------------------------------------------
+// Select relevant examples (keyword scoring)
+// ---------------------------------------------------------------------------
+
 export function selectRelevantExamples({
   rootDir,
+  repository,
+  examples: preloaded,
   brief,
   diagnosis,
   mined,
   strategy,
   limit = 3
 }) {
-  const examples = loadExampleMemory(rootDir);
+  // Use preloaded examples if provided, otherwise load from file
+  const examples = preloaded || loadExampleMemoryFromFile(rootDir);
   if (examples.length === 0) return [];
 
   const query = tokenize([
@@ -45,15 +78,23 @@ export function selectRelevantExamples({
     .filter((example) => example.relevanceScore > 0);
 }
 
+// ---------------------------------------------------------------------------
+// Format examples for agent prompts
+// ---------------------------------------------------------------------------
+
 export function formatExamplesForAgent(examples, agentName) {
   if (!examples?.length) return "";
 
+  const hasGold = examples.some(e => e.quality === "gold");
+
   const sections = examples.map((example, index) => {
     const scriptSample = truncate(example.scriptExcerpt || example.scriptText || "", agentName === "critic" ? 1200 : 1800);
+    const qualityLabel = example.quality === "gold" ? "GOLD (human-approved standard)" : example.quality;
+
     return `### Example ${index + 1}: ${example.projectName}
 
 ID: ${example.id}
-Quality: ${example.quality}
+Quality: ${qualityLabel}
 Pairing confidence: ${example.pairingConfidence}
 Tags: ${(example.tags || []).join(", ")}
 
@@ -64,12 +105,20 @@ Script sample:
 ${scriptSample}`;
   });
 
-  return `\n\n## Relevant StudioNow Usable Examples
+  const goldInstruction = hasGold
+    ? `\n\nGOLD EXAMPLES ARE HARD STANDARDS. When a gold example is retrieved, your output must match or exceed its structural quality, specificity, production-readiness, and voice discipline. If your script is weaker than the gold example on any of those dimensions, revise before returning. Gold examples represent what the StudioNow team considers production-ready work.`
+    : "";
 
-Use these as taste references, not templates to copy. Borrow structural moves, specificity, rhythm, and production logic. Do not reuse client-specific claims unless they appear in the current brief.
+  return `\n\n## Relevant StudioNow Examples
+
+Use these as structural and quality references. Borrow structural moves, specificity, rhythm, and production logic. Do not reuse client-specific claims unless they appear in the current brief.${goldInstruction}
 
 ${sections.join("\n\n")}`;
 }
+
+// ---------------------------------------------------------------------------
+// Scoring
+// ---------------------------------------------------------------------------
 
 function scoreExample(example, queryTokens) {
   let relevance = 0;

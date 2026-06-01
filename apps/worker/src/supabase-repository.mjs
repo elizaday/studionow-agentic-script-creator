@@ -77,6 +77,99 @@ export function createSupabaseRepository({
       const arrayBuffer = await data.arrayBuffer();
       return Buffer.from(arrayBuffer);
     },
+    async loadExamplesFromDb() {
+      const { data, error } = await client
+        .from("script_examples")
+        .select("*")
+        .eq("status", "active")
+        .in("quality", ["gold", "usable"])
+        .order("quality", { ascending: false });
+      if (error) throw error;
+      return (data || []).map(row => ({
+        id: row.id,
+        projectName: row.project_name,
+        quality: row.quality,
+        pairingConfidence: row.pairing_confidence || "unknown",
+        pairingType: row.pairing_type || "unknown",
+        tags: row.tags || [],
+        teachingPoints: row.teaching_points || [],
+        briefText: row.brief_text || "",
+        scriptText: row.script_text || "",
+        scriptExcerpt: row.script_excerpt || "",
+        retrievalText: row.retrieval_text || "",
+        notes: row.notes || ""
+      }));
+    },
+    async loadActiveLearningRules(agentName = null) {
+      let query = client
+        .from("learning_rules")
+        .select("rule, category, applies_to")
+        .eq("status", "active");
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).filter(row => {
+        if (!agentName) return true;
+        if (!row.applies_to || row.applies_to.length === 0) return true;
+        return row.applies_to.includes(agentName);
+      }).map(row => row.rule);
+    },
+    async ingestGoldCandidate(candidateId) {
+      // Read the gold candidate
+      const { data: candidate, error: fetchErr } = await client
+        .from("script_gold_candidates")
+        .select("*")
+        .eq("id", candidateId)
+        .single();
+      if (fetchErr) throw fetchErr;
+      if (!candidate) throw new Error(`Gold candidate ${candidateId} not found`);
+
+      // Build the example row
+      const projectName = candidate.project_name || "Gold Example";
+      const tags = Array.isArray(candidate.tags) && candidate.tags.length > 0
+        ? candidate.tags
+        : ["gold", "human-edited"];
+      const teachingPoints = Array.isArray(candidate.teaching_points) && candidate.teaching_points.length > 0
+        ? candidate.teaching_points
+        : [candidate.why_gold || "Human-edited gold standard.", candidate.what_changed || ""].filter(Boolean);
+      const scriptText = candidate.final_script_text || "";
+      const scriptExcerpt = scriptText.slice(0, 2000);
+      const briefText = candidate.brief_text || "";
+      const retrievalText = [projectName, briefText.slice(0, 500), tags.join(" "), scriptExcerpt.slice(0, 500)].join("\n");
+
+      const { data: example, error: insertErr } = await client
+        .from("script_examples")
+        .insert({
+          project_name: projectName,
+          client: candidate.client || null,
+          quality: "gold",
+          source_kind: "gold-candidate",
+          pairing_confidence: "high",
+          pairing_type: "brief-to-edited-script",
+          tags,
+          brief_text: briefText,
+          script_text: scriptText,
+          script_excerpt: scriptExcerpt,
+          retrieval_text: retrievalText,
+          teaching_points: teachingPoints,
+          notes: `Promoted from gold candidate ${candidateId}. Reviewer: ${candidate.reviewer_name || "unknown"}.`,
+          source_gold_candidate_id: candidateId,
+          status: "active"
+        })
+        .select("id")
+        .single();
+      if (insertErr) throw insertErr;
+
+      // Update the gold candidate status
+      await client
+        .from("script_gold_candidates")
+        .update({
+          status: "ingested",
+          promoted_example_key: example.id
+        })
+        .eq("id", candidateId);
+
+      return example.id;
+    },
     async failJob(jobId, error) {
       if (!jobId) {
         console.error("Cannot mark failure without a job id:", error);
