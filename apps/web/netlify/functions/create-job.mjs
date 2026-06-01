@@ -32,6 +32,7 @@ function normalizeBrief(body) {
     brief: body.brief.trim(),
     name: body.name || "Untitled StudioNow Brief",
     workflowMode,
+    producerNotes: typeof body.producerNotes === "string" ? body.producerNotes.trim() : "",
     attachments: body.attachments || []
   };
 }

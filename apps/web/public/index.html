@@ -662,6 +662,14 @@
           <div class="file-list" id="fileList"></div>
           <div class="file-total" id="fileTotal"></div>
         </div>
+        <div class="full-width">
+          <label>Producer Notes / Overrides (optional)</label>
+          <textarea
+            id="producerNotes"
+            placeholder="Special instructions for this run. Examples: only use image 36 from the deck; do not include children or seniors; avoid showing retail workers; prioritize the product shots over lifestyle; use the client-supplied tagline exactly."
+          ></textarea>
+          <div class="tone-hint">These notes override the brief and reference files when there is a conflict.</div>
+        </div>
       </div>
 
       <div class="error" id="error"></div>
@@ -1077,6 +1085,7 @@
       const customRuntime = document.getElementById("customRuntime").value.trim();
       const runtime = runtimeSel === "Custom" ? customRuntime : runtimeSel;
       const tagline = document.getElementById("tagline").value.trim();
+      const producerNotes = document.getElementById("producerNotes").value.trim();
       const briefText = document.getElementById("brief").value.trim();
 
       if (!audience) return showError("Please select Internal or External.");
@@ -1104,6 +1113,10 @@
       fullBrief += `Audio: ${selectedAudio}\n`;
       fullBrief += `Runtime: ${runtime}\n`;
       if (tagline) fullBrief += `Key Message / Tagline: ${tagline}\n`;
+      if (producerNotes) {
+        fullBrief += `\nProducer Notes / Overrides:\n${producerNotes}\n`;
+        fullBrief += `\nInstruction: Treat the Producer Notes / Overrides above as higher priority than the uploaded brief and reference files. If the notes restrict an asset, audience type, casting choice, image number, claim, tone, or visual approach, follow the notes.\n`;
+      }
       if (briefMode === "file") {
         fullBrief += `\nBrief: The full project brief is in the attached document. Extract all relevant details from it.`;
       } else {
@@ -1139,6 +1152,7 @@
             name: projectName || `${scriptType} — ${runtime}`,
             workflowMode,
             brief: fullBrief,
+            producerNotes,
             attachments
           })
         });
