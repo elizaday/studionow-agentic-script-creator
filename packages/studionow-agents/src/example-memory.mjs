@@ -88,30 +88,28 @@ export function formatExamplesForAgent(examples, agentName) {
   const hasGold = examples.some(e => e.quality === "gold");
 
   const sections = examples.map((example, index) => {
-    const scriptSample = truncate(example.scriptExcerpt || example.scriptText || "", agentName === "critic" ? 1200 : 1800);
     const qualityLabel = example.quality === "gold" ? "GOLD (human-approved standard)" : example.quality;
 
+    // CRITICAL: Do NOT inject raw script text. It causes the model to copy
+    // brand names, metrics, taglines, and campaign lines from unrelated projects
+    // into the current brief. Teaching points capture the structural lessons
+    // without leaking client-specific content.
     return `### Example ${index + 1}: ${example.projectName}
 
-ID: ${example.id}
 Quality: ${qualityLabel}
-Pairing confidence: ${example.pairingConfidence}
 Tags: ${(example.tags || []).join(", ")}
 
 What this example teaches:
-${(example.teachingPoints || []).map((point) => `- ${point}`).join("\n")}
-
-Script sample:
-${scriptSample}`;
+${(example.teachingPoints || []).map((point) => `- ${point}`).join("\n")}`;
   });
 
   const goldInstruction = hasGold
     ? `\n\nGOLD EXAMPLES ARE HARD STANDARDS. When a gold example is retrieved, your output must match or exceed its structural quality, specificity, production-readiness, and voice discipline. If your script is weaker than the gold example on any of those dimensions, revise before returning. Gold examples represent what the StudioNow team considers production-ready work.`
     : "";
 
-  return `\n\n## Relevant StudioNow Examples
+  return `\n\n## Relevant StudioNow Examples (STRUCTURAL LESSONS ONLY)
 
-Use these as structural and quality references. Borrow structural moves, specificity, rhythm, and production logic. Do not reuse client-specific claims unless they appear in the current brief.${goldInstruction}
+These examples teach structural patterns, not content. Learn from how they are built, not what they say. NEVER copy, adapt, or reference any brand name, metric, tagline, product claim, campaign name, or visual detail from these examples. Every word in your script must come from the current brief and its attachments. If a detail is not in the current brief, it does not exist.${goldInstruction}
 
 ${sections.join("\n\n")}`;
 }
