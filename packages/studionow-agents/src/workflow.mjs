@@ -186,13 +186,15 @@ export async function runStudioNowWorkflow({
     await repository.artifact(job.id, "visual_inventory", "Visual Inventory", visualInventory);
   }
 
-  const relevantExamples = selectRelevantExamples({
-    rootDir,
-    brief,
-    diagnosis,
-    mined,
-    limit: 3
-  });
+  const relevantExamples = isExampleRetrievalEnabled()
+    ? selectRelevantExamples({
+        rootDir,
+        brief,
+        diagnosis,
+        mined,
+        limit: 3
+      })
+    : [];
   if (relevantExamples.length > 0) {
     if (typeof repository.exampleUsage === "function") {
       await repository.exampleUsage(job.id, relevantExamples);
@@ -662,9 +664,12 @@ async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository
   await repository.artifact(job.id, "strategy", "Concept Strategy", strategy);
   await repository.artifact(job.id, "script_blueprint", "Script Blueprint", blueprint);
 
-  // 3. Example retrieval (Supabase first, JSON fallback).
-  const allExamples = await loadExamples({ rootDir, repository });
-  const relevantExamples = selectRelevantExamples({ rootDir, examples: allExamples, brief, diagnosis, mined, limit: 3 });
+  // 3. Example retrieval is opt-in. Production defaults to no per-job samples.
+  let relevantExamples = [];
+  if (isExampleRetrievalEnabled()) {
+    const allExamples = await loadExamples({ rootDir, repository });
+    relevantExamples = selectRelevantExamples({ rootDir, examples: allExamples, brief, diagnosis, mined, limit: 3 });
+  }
   if (relevantExamples.length > 0 && typeof repository.exampleUsage === "function") {
     await repository.exampleUsage(job.id, relevantExamples);
   }
@@ -1106,12 +1111,17 @@ function workflowModeLabel(mode) {
   return "Full Producer";
 }
 
+function isExampleRetrievalEnabled() {
+  const value = String(process.env.ENABLE_EXAMPLE_RETRIEVAL || "").trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
 function buildFirstDraftStrategy({ diagnosis, mined }) {
   const direction = {
     id: "direct-first-draft",
     name: "Direct First Draft",
     coreEngine: inferCoreEngine(diagnosis, mined),
-    whatMakesItWork: "Gets to a credible, editable script quickly by using the diagnosed tension, mined proof, and StudioNow examples without pausing for concept options.",
+    whatMakesItWork: "Gets to a credible, editable script quickly by using the diagnosed tension and mined proof without pausing for concept options.",
     mainRisk: "Less producer-level exploration; visual motif and transitions may need a human or Full Producer pass.",
     whyItFits: "Best when the priority is a strong starting draft instead of a fully challenged producer blueprint."
   };
