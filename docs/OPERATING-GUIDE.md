@@ -250,6 +250,18 @@ If the new agent overlaps with an existing one, fix the existing one instead.
 
 OpenAI releases new models periodically. The default lives in `.env` as `OPENAI_MODEL`. Pricing is in `packages/studionow-agents/src/model/pricing.mjs`.
 
+For higher quality without putting every stage on the most expensive model, route models by agent:
+
+```text
+OPENAI_MODEL=gpt-5
+OPENAI_MODEL_PLANNER=gpt-5.4-mini
+OPENAI_MODEL_WRITER_PRODUCER=gpt-5.5
+OPENAI_MODEL_PLANNING=gpt-5.4-mini
+OPENAI_MODEL_WRITER=gpt-5.5
+```
+
+Exact stage variables such as `OPENAI_MODEL_WRITER_PRODUCER` win first. Group aliases such as `OPENAI_MODEL_WRITER` and `OPENAI_MODEL_PLANNING` win second. `OPENAI_MODEL` is the fallback. Set these on the persistent worker host and restart/redeploy the worker; setting them only in Vercel does not change generation unless the worker also runs there.
+
 Before changing the production model:
 
 1. Add the new model to the pricing table.

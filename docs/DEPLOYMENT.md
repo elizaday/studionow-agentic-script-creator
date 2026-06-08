@@ -76,11 +76,27 @@ Worker environment variables:
 ```text
 OPENAI_API_KEY
 OPENAI_MODEL
+OPENAI_MODEL_PLANNER
+OPENAI_MODEL_WRITER_PRODUCER
+OPENAI_MODEL_PLANNING
+OPENAI_MODEL_WRITER
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 WORKER_POLL_INTERVAL_MS
 WORKER_MAX_REVISION_LOOPS
 ```
+
+Recommended model routing:
+
+```text
+OPENAI_MODEL=gpt-5
+OPENAI_MODEL_PLANNER=gpt-5.4-mini
+OPENAI_MODEL_WRITER_PRODUCER=gpt-5.5
+OPENAI_MODEL_PLANNING=gpt-5.4-mini
+OPENAI_MODEL_WRITER=gpt-5.5
+```
+
+Exact stage variables win first, group aliases win second, and `OPENAI_MODEL` is the fallback. Restart or redeploy the worker after changing model variables; Vercel env changes only affect the UI/API functions.
 
 The worker can scale horizontally later because jobs are claimed through Supabase with row locking. For the first pilot, run one worker until the feedback loop is proven.
 
