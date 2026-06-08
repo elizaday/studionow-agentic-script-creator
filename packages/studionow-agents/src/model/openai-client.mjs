@@ -21,6 +21,33 @@ function buildUserContent(user, images) {
   return parts;
 }
 
+function envModel(name) {
+  const value = process.env[name];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function modelEnvNameForAgent(agentName) {
+  return `OPENAI_MODEL_${String(agentName || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")}`;
+}
+
+function resolveModelForAgent(agentName, fallbackModel) {
+  const agentSpecific = envModel(modelEnvNameForAgent(agentName));
+  if (agentSpecific) return agentSpecific;
+
+  if (agentName === "writer_producer" || agentName === "writer" || agentName === "formatter") {
+    return envModel("OPENAI_MODEL_WRITER") || fallbackModel;
+  }
+
+  if (agentName === "planner" || agentName === "diagnoser" || agentName === "miner" || agentName === "strategist" || agentName === "producer") {
+    return envModel("OPENAI_MODEL_PLANNING") || fallbackModel;
+  }
+
+  return fallbackModel;
+}
+
 async function saveFailedResponse(agentName, text, error) {
   try {
     const dir = process.env.OPENAI_DEBUG_DIR || resolve(process.cwd(), "outputs", "failed-responses");
@@ -54,9 +81,10 @@ export function createOpenAIModelClient({
     },
     async generateJson({ agentName, system, user, images = [] }) {
       lastMeta = null;
+      const requestModel = resolveModelForAgent(agentName, model);
       const userContent = buildUserContent(user, images);
       const response = await client.responses.create({
-        model,
+        model: requestModel,
         input: [
           { role: "system", content: system },
           { role: "user", content: userContent }
@@ -67,6 +95,7 @@ export function createOpenAIModelClient({
       const usage = response.usage;
       lastMeta = {
         response_id: response.id,
+        model: requestModel,
         usage: usage
           ? {
               input_tokens: usage.input_tokens,

@@ -832,7 +832,7 @@ async function withStageMetrics({ modelClient, repository, jobId, stage, agentNa
   const durationMs = Date.now() - started;
   const meta = typeof modelClient?.getLastResponseMeta === "function" ? modelClient.getLastResponseMeta() : null;
   const usage = meta?.usage;
-  const modelName = stripModelPrefix(modelClient?.name);
+  const modelName = stripModelPrefix(meta?.model || modelClient?.name);
   const cost = usage
     ? computeCostUsd({
         model: modelName,
