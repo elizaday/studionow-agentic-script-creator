@@ -166,7 +166,7 @@ function stripInlineMarkdown(s) {
 }
 
 function extractSpokenVo(s) {
-  const text = stripInlineMarkdown(String(s || "").replace(/\\n/g, "\n"));
+  const text = stripInlineMarkdown(String(s || "").replace(/\\n/g, "\n").replace(/<br\s*\/?>/gi, "\n"));
   const matches = [...text.matchAll(/\bVO:\s*([\s\S]*?)(?=\n\s*(?:VO:|SFX:|Music|MUSIC|SUPER:)\b|$)/gim)]
     .map((match) => match[1].trim())
     .filter(Boolean);

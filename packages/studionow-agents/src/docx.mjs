@@ -214,7 +214,7 @@ function buildTable(rows, widthWeights = [], assetMap = new Map()) {
 }
 
 function cellToParagraphs(text, isHeader = false, assetMap = new Map()) {
-  const parts = String(text || "").split(/\s{2,}\n|\n/);
+  const parts = String(text || "").replace(/<br\s*\/?>/gi, "\n").split(/\s{2,}\n|\n/);
   return parts.map((part) => new Paragraph({
     children: isHeader ? [new TextRun({ text: stripMarkdown(part), bold: true })] : parseInlineRuns(part, assetMap),
     spacing: { after: 80 }

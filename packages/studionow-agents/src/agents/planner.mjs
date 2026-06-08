@@ -85,6 +85,7 @@ Return this exact JSON shape. Every field is required.
 }
 
 Rules:
+- SOURCE FIREWALL: Use only the current brief, attached materials, and visual inventory. Do not borrow campaign names, metrics, taglines, project details, or lines from past StudioNow work or examples.
 - diagnosis: lock the real assignment. Never leave a string empty — if the brief is silent, infer and prefix with "TBD: ". Capture gaps in assumptions or risks.
 - mined: extract only material the creative team can actually use. humanTension is required and must be a non-empty string; if the brief does not state one, derive it from the opening tension. assetNotes.existing and assetNotes.missing are required; use "Not specified" only when the brief truly does not say.
 - strategy: choose ONE engine. needsDirectionChoice must be false. Provide exactly one direction with id "direction-1" and set recommendedDirectionId to "direction-1". coreEngine should be a named StudioNow engine (Relay/Handoff, Route/Map, Countdown, Reveal, Chaptered Case Study, Problem/Solution/Scale, Sensory Escalation, Day-in-the-Life, Thesis Across Time).

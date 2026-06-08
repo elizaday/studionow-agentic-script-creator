@@ -523,11 +523,11 @@
       <div class="workflow-mode">
         <button type="button" class="workflow-mode-btn" id="modeFirstDraft" onclick="setWorkflowMode('first_draft')">
           <strong>Quick Draft</strong>
-          <span>Fastest (~2-3 min). Script only, runtime-checked. Best for a pasted text brief you just need a strong draft from.</span>
+          <span>Fastest (~2-3 min). Brief-only safe path, no examples. Best for pasted text briefs and fast first passes.</span>
         </button>
         <button type="button" class="workflow-mode-btn active" id="modeProduction" onclick="setWorkflowMode('production')">
-          <strong>Production Package</strong>
-          <span>Recommended (~4-5 min). Script plus full producer notes — asset sourcing, clearances, music. Handles decks and images.</span>
+          <strong>Safe Production Package</strong>
+          <span>Recommended (~2-4 min). Current brief and attachments only. Script plus producer notes, asset sourcing, clearances, and music.</span>
         </button>
         <button type="button" class="workflow-mode-btn" id="modeFullProducer" onclick="setWorkflowMode('full_producer')">
           <strong>Deep Producer Review</strong>
@@ -1107,6 +1107,7 @@
       if (projectDate) fullBrief += `Date: ${projectDate}\n`;
       if (version) fullBrief += `Version: ${version}\n`;
       fullBrief += `Workflow Mode: ${workflowMode === "first_draft" ? "Quick Draft" : workflowMode === "production" ? "Production Package" : "Deep Producer Review"}\n`;
+      fullBrief += `Source Material Rule: Use only this brief and attached materials. Do not borrow facts, campaign names, claims, taglines, metrics, lines, or project details from past examples or other scripts.\n`;
       fullBrief += `Internal/External: ${audience}\n`;
       fullBrief += `Script Type: ${scriptType}\n`;
       fullBrief += `Tone: ${selectedTones.join(" + ")}\n`;
@@ -1241,9 +1242,19 @@
       const el = document.getElementById("events");
       if (!events?.length) { el.textContent = "No events yet."; return; }
       el.innerHTML = events.slice(-20).map((event) =>
-        `<div class="event"><strong>[${escapeHtml(event.stage)}]</strong> ${escapeHtml(event.message)}</div>`
+        `<div class="event"><strong>[${escapeHtml(event.stage)}]</strong> ${escapeHtml(event.message)}${renderEventMeta(event)}</div>`
       ).join("");
       el.scrollTop = el.scrollHeight;
+    }
+
+    function renderEventMeta(event) {
+      const p = event?.payload || {};
+      if (p.kind !== "stage_metrics") return "";
+      const bits = [];
+      if (p.model_name) bits.push(`model ${p.model_name}`);
+      if (p.input_tokens != null && p.output_tokens != null) bits.push(`${Number(p.input_tokens).toLocaleString()} in / ${Number(p.output_tokens).toLocaleString()} out`);
+      if (p.cost_usd != null) bits.push(`$${Number(p.cost_usd).toFixed(4)}`);
+      return bits.length ? ` <small>${escapeHtml(bits.join(" | "))}</small>` : "";
     }
 
     function renderDirections(job, artifacts) {

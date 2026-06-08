@@ -39,7 +39,7 @@ function splitCombinedMarkdown(markdown) {
 }
 
 function cleanClientScript(markdown) {
-  return normalize(markdown)
+  return sanitizeClientMarkdown(markdown)
     .replace(/\n---[\s\S]*$/m, "")
     .replace(/\n##\s+PRODUCER NOTES[\s\S]*$/im, "")
     .replace(/\n<!--[\s\S]*?-->/g, "")
@@ -47,7 +47,7 @@ function cleanClientScript(markdown) {
 }
 
 function cleanProducerNotes(markdown) {
-  const normalized = normalize(markdown)
+  const normalized = sanitizeProducerNotesMarkdown(markdown)
     .replace(/\n<!--[\s\S]*?-->/g, "")
     .trim();
 
@@ -76,4 +76,22 @@ ${(formatted?.deliveryChecklist || []).map((item) => `- ${item}`).join("\n") || 
 
 function normalize(value) {
   return String(value || "").replace(/\r\n/g, "\n").trim();
+}
+
+export function sanitizeClientMarkdown(markdown) {
+  return normalize(markdown)
+    .replace(/\\n/g, "<br>")
+    .replace(/[—–]/g, "-")
+    .replace(/[“”]/g, "\"")
+    .replace(/[‘’]/g, "'")
+    .trim();
+}
+
+export function sanitizeProducerNotesMarkdown(markdown) {
+  return normalize(markdown)
+    .replace(/\\n/g, "\n")
+    .replace(/[—–]/g, "-")
+    .replace(/[“”]/g, "\"")
+    .replace(/[‘’]/g, "'")
+    .trim();
 }

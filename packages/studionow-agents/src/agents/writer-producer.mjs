@@ -1,5 +1,6 @@
 import { runAgent, baseSystem } from "./run-agent.mjs";
 import { parseThreeColumnScriptTable } from "../runtime-gate.mjs";
+import { sanitizeClientMarkdown, sanitizeProducerNotesMarkdown } from "../final-artifacts.mjs";
 
 /**
  * Combined Writer + Producer Notes agent.
@@ -70,6 +71,7 @@ Return this exact JSON shape:
 }
 
 SCRIPT RULES (clientScriptMarkdown):
+- SOURCE FIREWALL: Every claim, metric, campaign name, tagline, product detail, and line must come from the current brief, attached materials, or approved brand/common knowledge. Do not borrow from past StudioNow examples or scripts.
 - Metadata header at the top.
 - Three-column table with this exact header: | AUDIO/VO | TC | VISUALS |
 - Present tense visuals. Motion in every visual row. No stock-photo descriptions.
@@ -134,12 +136,14 @@ producerNotesMarkdown is the separate producer notes document.`
 }
 
 function normalizeResult(result) {
+  const clientScriptMarkdown = sanitizeClientMarkdown(result.clientScriptMarkdown || "");
+  const producerNotesMarkdown = sanitizeProducerNotesMarkdown(result.producerNotesMarkdown || "");
   return {
     metadata: result.metadata || { title: "", client: "", writer: "StudioNow AI Agent Workflow", version: 1 },
     voWordCount: result.voWordCount || 0,
-    clientScriptMarkdown: result.clientScriptMarkdown || "",
-    producerNotesMarkdown: result.producerNotesMarkdown || "",
+    clientScriptMarkdown,
+    producerNotesMarkdown,
     // Compat fields for downstream code that reads draft-shaped objects
-    markdown: result.clientScriptMarkdown || ""
+    markdown: clientScriptMarkdown
   };
 }

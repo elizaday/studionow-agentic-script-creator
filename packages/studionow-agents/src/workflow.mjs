@@ -11,7 +11,7 @@ import { runRuntimeEditor } from "./agents/runtime-editor.mjs";
 import { runCritic } from "./agents/critic.mjs";
 import { runFormatter } from "./agents/formatter.mjs";
 import { runWriterProducer } from "./agents/writer-producer.mjs";
-import { prepareFinalArtifacts } from "./final-artifacts.mjs";
+import { prepareFinalArtifacts, sanitizeClientMarkdown, sanitizeProducerNotesMarkdown } from "./final-artifacts.mjs";
 import { formatExamplesForAgent, selectRelevantExamples, loadExamples } from "./example-memory.mjs";
 import {
   validateDiagnosis,
@@ -48,11 +48,11 @@ export async function runStudioNowWorkflow({
   const rawBrief = normalizeBrief(job.brief);
   const workflowMode = resolveWorkflowMode(rawBrief.workflowMode || job.workflow_mode);
 
-  // Lean Production mode runs on a separate, self-contained path so it can
-  // never disturb the two established modes. One Planner call replaces the
-  // diagnose/mine/strategize/blueprint chain.
-  if (workflowMode === WORKFLOW_MODES.PRODUCTION) {
-    return runLeanProductionWorkflow({ rootDir, modelClient, job, repository, rawBrief, maxRevisionLoops, maxCostUsd });
+  // Safe draft/production modes run on a separate, self-contained path. One
+  // Planner call replaces the diagnose/mine/strategize/blueprint chain, then a
+  // combined writer produces the script and notes without the slow formatter.
+  if (workflowMode === WORKFLOW_MODES.PRODUCTION || workflowMode === WORKFLOW_MODES.FIRST_DRAFT) {
+    return runLeanProductionWorkflow({ rootDir, modelClient, job, repository, rawBrief, workflowMode, maxRevisionLoops, maxCostUsd });
   }
 
   const isFirstDraftMode = workflowMode === WORKFLOW_MODES.FIRST_DRAFT;
@@ -595,8 +595,9 @@ export async function runStudioNowWorkflow({
 // diagnose+mine+strategize+blueprint chain; then writer, deterministic
 // runtime gate (with one forced trim if over budget), and producer notes.
 // No standalone critic, no concept-option pause.
-async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository, rawBrief, maxRevisionLoops, maxCostUsd }) {
-  const incomingAttachments = rawBrief.attachments || [];
+async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository, rawBrief, workflowMode, maxRevisionLoops, maxCostUsd }) {
+  const isFirstDraftMode = workflowMode === WORKFLOW_MODES.FIRST_DRAFT;
+  const incomingAttachments = isFirstDraftMode ? [] : (rawBrief.attachments || []);
   const hydratedAttachments = await hydrateStorageAttachments(incomingAttachments, repository);
   const expandedAttachments = await expandPdfAttachments(hydratedAttachments);
   const rawAttachments = expandedAttachments;
@@ -605,10 +606,20 @@ async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository
   const loops = Math.max(0, maxRevisionLoops);
 
   await repository.updateJob(job.id, { status: STATUS.RUNNING, current_stage: STAGES.DIAGNOSIS });
-  await repository.event(job.id, STAGES.DIAGNOSIS, "Workflow mode: Production Package.", "info", {
+  await repository.event(job.id, STAGES.DIAGNOSIS, `Workflow mode: ${workflowModeLabel(workflowMode)}.`, "info", {
     kind: "workflow_mode",
-    workflow_mode: WORKFLOW_MODES.PRODUCTION
+    workflow_mode: workflowMode,
+    ignored_attachments: isFirstDraftMode ? (rawBrief.attachments || []).length : 0
   });
+  if (isFirstDraftMode && (rawBrief.attachments || []).length > 0) {
+    await repository.event(
+      job.id,
+      STAGES.DIAGNOSIS,
+      `Quick Draft ignored ${(rawBrief.attachments || []).length} attached file(s). Use Production Package or Deep Producer Review when deck/image content matters.`,
+      "info",
+      { kind: "attachments_ignored", count: (rawBrief.attachments || []).length }
+    );
+  }
 
   // 1. Optional visual intake (only when images/decks are attached).
   const imageAttachments = collectImageAttachments(rawAttachments);
@@ -678,6 +689,10 @@ async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository
     await repository.event(job.id, STAGES.STRATEGY, `Retrieved ${relevantExamples.length} example(s)${goldCount > 0 ? ` (${goldCount} gold)` : ""}.`, "info", {
       kind: "example_retrieval",
       examples: relevantExamples.map(e => ({ id: e.id, projectName: e.projectName, quality: e.quality, relevanceScore: e.relevanceScore }))
+    });
+  } else {
+    await repository.event(job.id, STAGES.STRATEGY, "Example retrieval disabled. Using current brief and attached materials only.", "info", {
+      kind: "example_retrieval_disabled"
     });
   }
 
@@ -766,11 +781,13 @@ async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository
   await repository.event(job.id, STAGES.FINAL, "Assembling final deliverables.");
   const critique = { passes: true, score: 0, findings: ["Production Package mode: runtime gate enforced."], requiredRevisions: [] };
   const draft = writerResult;
+  const clientScriptMarkdown = sanitizeClientMarkdown(writerResult.clientScriptMarkdown);
+  const producerNotesMarkdown = sanitizeProducerNotesMarkdown(writerResult.producerNotesMarkdown || "# PRODUCER NOTES\n\n## Notes\n- No producer notes were generated.");
   const preparedFinal = {
-    clientScriptMarkdown: writerResult.clientScriptMarkdown,
-    producerNotesMarkdown: writerResult.producerNotesMarkdown || "# PRODUCER NOTES\n\n## Notes\n- No producer notes were generated.",
-    finalMarkdown: writerResult.clientScriptMarkdown,
-    combinedMarkdown: `${writerResult.clientScriptMarkdown}\n\n---\n\n${writerResult.producerNotesMarkdown}`.trim(),
+    clientScriptMarkdown,
+    producerNotesMarkdown,
+    finalMarkdown: clientScriptMarkdown,
+    combinedMarkdown: `${clientScriptMarkdown}\n\n---\n\n${producerNotesMarkdown}`.trim(),
     deliveryChecklist: []
   };
 
@@ -1106,9 +1123,9 @@ function resolveWorkflowMode(value) {
 }
 
 function workflowModeLabel(mode) {
-  if (mode === WORKFLOW_MODES.FIRST_DRAFT) return "First Draft";
-  if (mode === WORKFLOW_MODES.PRODUCTION) return "Production Package";
-  return "Full Producer";
+  if (mode === WORKFLOW_MODES.FIRST_DRAFT) return "Quick Draft";
+  if (mode === WORKFLOW_MODES.PRODUCTION) return "Safe Production Package";
+  return "Deep Producer Review";
 }
 
 function isExampleRetrievalEnabled() {
