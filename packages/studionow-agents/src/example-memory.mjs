@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { compileTasteCard, formatTasteCardsForPrompt } from "./taste-cards.mjs";
 
 const STOPWORDS = new Set([
   "the", "and", "for", "with", "that", "this", "from", "into", "are", "our", "your",
@@ -71,11 +72,23 @@ export function selectRelevantExamples({
     strategy?.directions?.map((direction) => `${direction.name} ${direction.coreEngine}`).join(" ")
   ].filter(Boolean).join("\n"));
 
+  const briefClient = extractClientName(brief);
+
   return examples
-    .map((example) => ({ ...example, relevanceScore: scoreExample(example, query) }))
+    .map((example) => ({ ...example, relevanceScore: scoreExample(example, query, briefClient) }))
     .sort((a, b) => b.relevanceScore - a.relevanceScore)
     .slice(0, limit)
     .filter((example) => example.relevanceScore > 0);
+}
+
+// Pull the client name out of the brief so scoring can prefer same-client
+// examples. Structural value transfers across clients; named content must not.
+export function extractClientName(brief) {
+  if (!brief) return null;
+  if (typeof brief.client === "string" && brief.client.trim()) return brief.client.trim();
+  const text = typeof brief === "string" ? brief : brief.brief || "";
+  const match = String(text).match(/^\s*Client:\s*(.+)$/im);
+  return match ? match[1].trim() : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,40 +98,20 @@ export function selectRelevantExamples({
 export function formatExamplesForAgent(examples, agentName) {
   if (!examples?.length) return "";
 
-  const hasGold = examples.some(e => e.quality === "gold");
-
-  const sections = examples.map((example, index) => {
-    const qualityLabel = example.quality === "gold" ? "GOLD (human-approved standard)" : example.quality;
-
-    // CRITICAL: Do NOT inject raw script text. It causes the model to copy
-    // brand names, metrics, taglines, and campaign lines from unrelated projects
-    // into the current brief. Teaching points capture the structural lessons
-    // without leaking client-specific content.
-    return `### Example ${index + 1}: ${example.projectName}
-
-Quality: ${qualityLabel}
-Tags: ${(example.tags || []).join(", ")}
-
-What this example teaches:
-${(example.teachingPoints || []).map((point) => `- ${point}`).join("\n")}`;
-  });
-
-  const goldInstruction = hasGold
-    ? `\n\nGOLD EXAMPLES ARE HARD STANDARDS. When a gold example is retrieved, your output must match or exceed its structural quality, specificity, production-readiness, and voice discipline. If your script is weaker than the gold example on any of those dimensions, revise before returning. Gold examples represent what the StudioNow team considers production-ready work.`
-    : "";
-
-  return `\n\n## Relevant StudioNow Examples (STRUCTURAL LESSONS ONLY)
-
-These examples teach structural patterns, not content. Learn from how they are built, not what they say. NEVER copy, adapt, or reference any brand name, metric, tagline, product claim, campaign name, or visual detail from these examples. Every word in your script must come from the current brief and its attachments. If a detail is not in the current brief, it does not exist.${goldInstruction}
-
-${sections.join("\n\n")}`;
+  // Inject taste cards, never example text. Cards are structural facts
+  // (beats, density, super cadence, source mix) plus noun-scrubbed lessons —
+  // contamination-safe by construction. Project names, tags, and teaching
+  // points all stay out of the prompt because each has leaked client nouns
+  // before. The leak gate in taste-cards.mjs is the regression net.
+  const cards = examples.map((example) => example.tasteCard || compileTasteCard(example));
+  return formatTasteCardsForPrompt(cards);
 }
 
 // ---------------------------------------------------------------------------
 // Scoring
 // ---------------------------------------------------------------------------
 
-function scoreExample(example, queryTokens) {
+function scoreExample(example, queryTokens, briefClient = null) {
   let relevance = 0;
   const fields = {
     tags: tokenize(example.tags?.join(" ")),
@@ -140,7 +133,19 @@ function scoreExample(example, queryTokens) {
   const qualityMultiplier = QUALITY_MULTIPLIERS[example.quality] ?? 1.0;
   const qualityFloor = QUALITY_FLOOR[example.quality] ?? 0;
 
-  return Math.round((relevance + qualityFloor) * qualityMultiplier * 100) / 100;
+  // Cross-client guard: structure transfers, content must not. When both
+  // clients are known and share no tokens, halve the score so same-client
+  // examples win ties but a strong cross-client structural match can still
+  // surface (its card carries no client content anyway).
+  let clientMultiplier = 1.0;
+  if (briefClient && example.client) {
+    const briefTokens = tokenize(briefClient);
+    const exampleTokens = tokenize(example.client);
+    const overlap = [...briefTokens].some((t) => exampleTokens.has(t));
+    clientMultiplier = overlap ? 1.1 : 0.5;
+  }
+
+  return Math.round((relevance + qualityFloor) * qualityMultiplier * clientMultiplier * 100) / 100;
 }
 
 const QUALITY_MULTIPLIERS = {

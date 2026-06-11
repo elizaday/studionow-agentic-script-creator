@@ -29,6 +29,7 @@ import {
 import { evaluateRuntimeHonesty, resolveRuntimeTargets } from "./runtime-gate.mjs";
 import { computeCostUsd } from "./model/pricing.mjs";
 import { pdfToImageAttachments } from "./pdf-extract.mjs";
+import { findExampleLeaks } from "./taste-cards.mjs";
 
 export const WORKFLOW_MODES = Object.freeze({
   FIRST_DRAFT: "first_draft",
@@ -690,8 +691,8 @@ async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository
       kind: "example_retrieval",
       examples: relevantExamples.map(e => ({ id: e.id, projectName: e.projectName, quality: e.quality, relevanceScore: e.relevanceScore }))
     });
-  } else {
-    await repository.event(job.id, STAGES.STRATEGY, "Example retrieval disabled. Using current brief and attached materials only.", "info", {
+  } else if (!isExampleRetrievalEnabled()) {
+    await repository.event(job.id, STAGES.STRATEGY, "Example retrieval opted out via ENABLE_EXAMPLE_RETRIEVAL=false. Using current brief and attached materials only.", "info", {
       kind: "example_retrieval_disabled"
     });
   }
@@ -774,6 +775,52 @@ async function runLeanProductionWorkflow({ rootDir, modelClient, job, repository
     runtimeEdit.revisedVoWords = writerResult.voWordCount;
     runtimeEdit.markdown = writerResult.clientScriptMarkdown;
     runtimeEdit.status = "within_budget";
+  }
+
+  // 5b. Leak gate (code-only): no distinctive token from a retrieved example
+  // may appear in the output unless it is also in the brief. Cards make this
+  // nearly impossible; the gate is the regression net. One forced rewrite,
+  // then deliver-with-error-event so a human sees it.
+  if (relevantExamples.length > 0) {
+    const briefTextForGate = typeof brief === "string" ? brief : brief.brief || "";
+    let leaks = findExampleLeaks({
+      outputText: `${writerResult.clientScriptMarkdown}\n${writerResult.producerNotesMarkdown || ""}`,
+      briefText: briefTextForGate,
+      examples: relevantExamples
+    });
+    if (leaks.length > 0 && loops > 0) {
+      await repository.event(job.id, STAGES.REVISION, `Leak gate: ${leaks.length} token(s) from retrieved examples found in output (${leaks.map((l) => l.token).join(", ")}). Forcing one rewrite.`, "warn", {
+        kind: "leak_gate_revision", leaks
+      });
+      writerResult = await withStageMetrics({
+        modelClient, repository, jobId: job.id, totals, maxCostUsd,
+        stage: STAGES.REVISION, agentName: "writer_producer",
+        run: async () => {
+          const out = await runWriterProducer({
+            modelClient,
+            references: `${await loadReferencePack(rootDir, ["voice", "format", "production"])}${formatExamplesForAgent(relevantExamples, "writer")}`,
+            brief, diagnosis, mined, strategy, blueprint, visualInventory,
+            currentDraft: writerResult,
+            trimInstruction: `Remove every occurrence of the following terms — they belong to other clients' projects and must not appear in this script or its producer notes: ${leaks.map((l) => `"${l.token}"`).join(", ")}. Replace each with material from the current brief only. Change nothing else.`
+          });
+          validateWriterProducer(out);
+          return out;
+        }
+      });
+      await repository.artifact(job.id, "revision", "Leak-gate rewrite", writerResult, writerResult.clientScriptMarkdown);
+      leaks = findExampleLeaks({
+        outputText: `${writerResult.clientScriptMarkdown}\n${writerResult.producerNotesMarkdown || ""}`,
+        briefText: briefTextForGate,
+        examples: relevantExamples
+      });
+    }
+    if (leaks.length > 0) {
+      await repository.event(job.id, STAGES.FINAL, `Leak gate: ${leaks.length} example token(s) still present after rewrite (${leaks.map((l) => l.token).join(", ")}). Review before client delivery.`, "error", {
+        kind: "leak_gate_failed", leaks
+      });
+    } else {
+      await repository.event(job.id, STAGES.FINAL, "Leak gate: clean. No example content in output.", "info", { kind: "leak_gate_clean" });
+    }
   }
 
   // 6. Assemble final artifacts (no model call — just cleanup).
@@ -1129,8 +1176,13 @@ function workflowModeLabel(mode) {
 }
 
 function isExampleRetrievalEnabled() {
+  // Retrieval is ON by default. The June 2026 contamination incident was
+  // fixed structurally — prompts receive taste cards (structural facts with
+  // scrubbed lessons), never example text — and the leak gate verifies the
+  // output. Set ENABLE_EXAMPLE_RETRIEVAL=false to opt out.
   const value = String(process.env.ENABLE_EXAMPLE_RETRIEVAL || "").trim().toLowerCase();
-  return value === "1" || value === "true" || value === "yes";
+  if (value === "0" || value === "false" || value === "no" || value === "off") return false;
+  return true;
 }
 
 function buildFirstDraftStrategy({ diagnosis, mined }) {
